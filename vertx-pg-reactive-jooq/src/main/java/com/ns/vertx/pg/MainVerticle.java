@@ -4,24 +4,15 @@ import static com.ns.vertx.pg.ActionHelper.*;
 import static com.ns.vertx.pg.DBQueries.*;
 
 import java.util.NoSuchElementException;
-import java.util.function.Function;
 
 import org.jooq.Configuration;
-import org.jooq.DSLContext;
-import org.jooq.Query;
-import org.jooq.ResultQuery;
 import org.jooq.SQLDialect;
-import org.jooq.UpdateReturningStep;
-import org.jooq.UpdateWhereStep;
-import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ns.vertx.pg.jooq.tables.daos.CategoryDao;
-import com.ns.vertx.pg.jooq.tables.records.CategoryRecord;
 
-import io.github.jklingsporn.vertx.jooq.classic.ClassicQueryExecutor;
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
@@ -33,7 +24,12 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
-import io.vertx.sqlclient.*;
+import io.vertx.sqlclient.PoolOptions;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowIterator;
+import io.vertx.sqlclient.RowSet;
+import io.vertx.sqlclient.SqlConnection;
+import io.vertx.sqlclient.Tuple;
 
 public class MainVerticle extends AbstractVerticle {
 
@@ -74,7 +70,7 @@ public class MainVerticle extends AbstractVerticle {
 		Configuration configuration= new DefaultConfiguration();
 		configuration.set(SQLDialect.POSTGRES);
 
-		//no other DB-Configuration necessary because jOOQ is only used to render our statements - not for excecution
+		//no other DB-Configuration necessary because jOOQ is only used to render our statements - not for execution
 		CategoryDao categoryDAO = new CategoryDao(configuration, pgClient);
 		
 		categoryDAO.findOneById(1L).setHandler(res -> {
@@ -84,34 +80,22 @@ public class MainVerticle extends AbstractVerticle {
 			} else {
 				System.err.println("Something failed badly: " + res.cause().getMessage());
 			}
-		});
-						
-		// example of querying data using Reactive driver and Reactive vertx-jooq implementation which is TYPE-SAFE (try also with ClassicQueryExecutor)
-//		ReactiveClassicGenericQueryExecutor queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
-				
-	//(UpdateConditionStep<CategoryRecord>)
-
+		});		
 		
-		/* TODO: solve this PROBLEM:
-		 " execute(Function<DSLContext,? extends Query>) in the type ReactiveClassicGenericQueryExecutor is not applicable for the arguments (UpdateConditionStep<CategoryRecord>) "		 		 
-		 ...IFF it doesn't work out might wanna try to do RX-fied Java:
-		https://github.com/jklingsporn/vertx-jooq/issues/112#issuecomment-504076457 */
+		ReactiveClassicGenericQueryExecutor queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
+		Future<Integer> updatedCustom = queryExecutor.execute(dsl -> dsl 
+					.update(com.ns.vertx.pg.jooq.tables.Category.CATEGORY)
+					.set(com.ns.vertx.pg.jooq.tables.Category.CATEGORY.NAME, "Horror")
+					.where(com.ns.vertx.pg.jooq.tables.Category.CATEGORY.CATEGORY_ID.eq(1L))				
+				);
 		
-//		ReactiveClassicGenericQueryExecutor queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
-//		Future<Integer> updatedCustom = queryExecutor.execute(DSL.using(configuration) // try casting with (Function<DSLContext, ? extends Query>) 
-//					.update(com.ns.vertx.pg.jooq.tables.Category.CATEGORY)
-//					.set(com.ns.vertx.pg.jooq.tables.Category.CATEGORY.NAME, "Mystery")
-//					.where(com.ns.vertx.pg.jooq.tables.Category.CATEGORY.CATEGORY_ID.eq(1L))				
-//				);
-//		
-//		updatedCustom.setHandler(res -> {
-//			if (res.succeeded()) {
-//				LOGGER.info("Rows updated: " + res.result());
-//			} else {
-//				LOGGER.error("Something failed badly (in updatedCustom): " + res.cause().getMessage());
-//			}
-//		});
-		
+		updatedCustom.setHandler(res -> {
+			if (res.succeeded()) {
+				LOGGER.info("Rows updated: " + res.result());
+			} else {
+				LOGGER.error("Something failed badly (in updatedCustom): " + res.cause().getMessage());
+			}
+		});		
 		
 		Future<Void> futureConnection = connect().compose(connection -> {
 			Promise<Void> retFuture = Promise.promise(); 
@@ -256,7 +240,7 @@ public class MainVerticle extends AbstractVerticle {
 		return promise.future();
 	}
 	
-	
+	// TODO: edit next 2 following methods for UPDATING Category to use Reactive-Classic-jOOQ implementation !!! 
 	private void updateCategoryHandler(RoutingContext rc) {
 		int id = Integer.valueOf(rc.request().getParam("id"));
 		Category category = rc.getBodyAsJson().mapTo(Category.class);
