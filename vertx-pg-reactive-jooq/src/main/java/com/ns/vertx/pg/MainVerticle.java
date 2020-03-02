@@ -6,14 +6,22 @@ import static com.ns.vertx.pg.DBQueries.*;
 import java.util.NoSuchElementException;
 
 import org.jooq.Configuration;
+import org.jooq.Query;
+import org.jooq.Record;
+import org.jooq.Result;
+import org.jooq.ResultQuery;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DefaultConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ns.vertx.pg.jooq.tables.Category;
 import com.ns.vertx.pg.jooq.tables.daos.CategoryDao;
+import com.ns.vertx.pg.jooq.tables.interfaces.ICategory;
+import com.ns.vertx.pg.jooq.tables.records.CategoryRecord;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
+import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -36,11 +44,11 @@ public class MainVerticle extends AbstractVerticle {
 	private final static Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
 	
 	private PgPool pgClient; 
+	private ReactiveClassicGenericQueryExecutor queryExecutor;
 	
 	@Override
 	public void start(Promise<Void> startPromise) throws Exception {				
-		Router routerREST = Router.router(vertx);
-		
+		Router routerREST = Router.router(vertx);		
 		routerREST.get("/categories").handler(this::getAllCategoriesHandler);
 		routerREST.get("/categories/:id").handler(this::getCategoryByIdHandler);
 		routerREST.delete("/categories/:id").handler(this::deleteCategoryHandler);
@@ -59,9 +67,9 @@ public class MainVerticle extends AbstractVerticle {
 		});
 		
 		PgConnectOptions connectOptions = new PgConnectOptions()
-				.setPort(5432).setHost("localhost")
-				.setDatabase("vertx-jooq-cr")
-				.setUser("postgres").setPassword("postgres");
+			.setPort(5432).setHost("localhost")
+			.setDatabase("vertx-jooq-cr")
+			.setUser("postgres").setPassword("postgres");
 		
 		PoolOptions poolOptions = new PoolOptions().setMaxSize(30);
 		pgClient = PgPool.pool(vertx, connectOptions, poolOptions);
@@ -69,37 +77,78 @@ public class MainVerticle extends AbstractVerticle {
 		// setting up JOOQ configuration
 		Configuration configuration= new DefaultConfiguration();
 		configuration.set(SQLDialect.POSTGRES);
-
-		//no other DB-Configuration necessary because jOOQ is only used to render our statements - not for execution
-		CategoryDao categoryDAO = new CategoryDao(configuration, pgClient);
 		
+		// =========================================================================================================
+		// ========================== Testing classic-reactive-jOOQ implementation::START ==========================		
+		//no other DB-Configuration necessary because jOOQ is only used to render our statements - not for execution
+		CategoryDao categoryDAO = new CategoryDao(configuration, pgClient);		
 		categoryDAO.findOneById(1L).setHandler(res -> {
 			if (res.succeeded()) {
+				// 
 				vertx.eventBus().send("Something", res.result().toJson());		
-				LOGGER.info("res.result().toJson() = " + res.result().toJson());
+				LOGGER.info("res.result().toJson() = " + res.result().toJson() + 
+						"\n(res.result()) instanceof com.ns.vertx.pg.jooq.tables.pojos.Category <=> " 
+						+ ((res.result()) instanceof com.ns.vertx.pg.jooq.tables.pojos.Category));
 			} else {
 				System.err.println("Something failed badly: " + res.cause().getMessage());
 			}
 		});		
 		
-		ReactiveClassicGenericQueryExecutor queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
-		Future<Integer> updatedCustom = queryExecutor.execute(dsl -> dsl 
-					.update(com.ns.vertx.pg.jooq.tables.Category.CATEGORY)
-					.set(com.ns.vertx.pg.jooq.tables.Category.CATEGORY.NAME, "Horror")
-					.where(com.ns.vertx.pg.jooq.tables.Category.CATEGORY.CATEGORY_ID.eq(1L))				
-				);
-		
-		updatedCustom.setHandler(res -> {
+		queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);		
+		// UPDATING Category with hard-coded values
+		Future<Integer> updatedCategory = queryExecutor.execute(dsl -> dsl 
+			.update(com.ns.vertx.pg.jooq.tables.Category.CATEGORY)
+			.set(com.ns.vertx.pg.jooq.tables.Category.CATEGORY.NAME, "Horror")
+			.where(com.ns.vertx.pg.jooq.tables.Category.CATEGORY.CATEGORY_ID.eq(1L))				
+		);		
+		updatedCategory.setHandler(res -> {
 			if (res.succeeded()) {
 				LOGGER.info("Rows updated: " + res.result());
 			} else {
-				LOGGER.error("Something failed badly (in updatedCustom): " + res.cause().getMessage());
+				LOGGER.error("Something failed badly (in updatedCategory): " + res.cause().getMessage());
+			}
+		});
+		
+		// INSERTING Category with hard-coded values
+		
+//		Future<Integer> insertCategory = queryExecutor.execute(dsl -> dsl
+//			.insertInto(com.ns.vertx.pg.jooq.tables.Category.CATEGORY, com.ns.vertx.pg.jooq.tables.Category.CATEGORY.NAME, 
+//				com.ns.vertx.pg.jooq.tables.Category.CATEGORY.IS_DELETED)
+//			.values("Adventure", false)
+//			.values("Adventure", false)
+//			.values("Adventure", false)
+//			.values("Adventure", false)
+//			.values("Adventure", false)
+//			.values("History", false)
+//			.values("Sport", true)
+//		);
+//		insertCategory.setHandler(res -> {
+//			if (res.succeeded()) {
+//				LOGGER.info("Rows inserted: " + res.result());
+//			} else {
+//				LOGGER.error("Something failed badly (in insertCategory): " + res.cause().getMessage());
+//			}
+//		});	
+		
+		// DELETING ALREADY inserted Categories
+		Future<Integer> deletedCategories = queryExecutor.execute(dsl -> dsl
+			.deleteFrom(com.ns.vertx.pg.jooq.tables.Category.CATEGORY)
+			.where(com.ns.vertx.pg.jooq.tables.Category.CATEGORY.NAME.eq("Adventure"))
+		);
+		deletedCategories.setHandler(res -> {
+			if (res.succeeded()) {
+				LOGGER.info("Rows deleted: " + res.result());
+			} else {
+				LOGGER.error("Something failed badly (in deletedCategories): " + res.cause().getMessage());
 			}
 		});		
+		// ================ Testing classic-reactive-jOOQ implementation::END ================
+		// ===================================================================================		
+
 		
 		Future<Void> futureConnection = connect().compose(connection -> {
 			Promise<Void> retFuture = Promise.promise(); 
-			createTableIfNeeded(connection).future()
+			createTableIfNeeded().future()
 				.setHandler(x -> {
 					connection.close();
 					retFuture.handle(x.mapEmpty());
@@ -131,17 +180,17 @@ public class MainVerticle extends AbstractVerticle {
 	}
 
 	
-	private Promise<SqlConnection> createTableIfNeeded(SqlConnection connection) {
+	private Promise<SqlConnection> createTableIfNeeded(/*SqlConnection connection*/) {
 		Promise<SqlConnection> promise = Promise.promise();
 		pgClient.getConnection(ar1 -> {
 			if (ar1.succeeded()) {
 				LOGGER.info("Connected!");
 				SqlConnection conn = ar1.result();		
-				conn.query(CREATE_CATEGORY_TABLE_SQL, ar2 -> {
-					if (ar2.succeeded()) {
-						promise.handle(ar2.map(conn));
+				conn.query(CREATE_CATEGORY_TABLE_SQL, rs -> {
+					if (rs.succeeded()) {
+						promise.handle(rs.map(conn));
 					} else {
-						LOGGER.error("Error, executing 'create_category_table_sql' query failed!", ar2.cause());
+						LOGGER.error("Error, executing 'create_category_table_sql' query failed!", rs.cause());
 						conn.close();
 					}
 				});
@@ -151,6 +200,7 @@ public class MainVerticle extends AbstractVerticle {
 		});	
 		return promise;
 	}
+	
 	
 	private JsonObject convertRowSetToJsonObject(RowSet<Row> rs) {
 		JsonObject categories = new JsonObject();
@@ -169,6 +219,7 @@ public class MainVerticle extends AbstractVerticle {
 		categories.put("categories", ja);
 		return categories;
 	}
+	
 	
 	private void getAllCategoriesHandler(RoutingContext rc) {
 		pgClient.getConnection(ar -> {
@@ -192,6 +243,7 @@ public class MainVerticle extends AbstractVerticle {
 		});
 	}
 	
+	
 	private void getCategoryByIdHandler(RoutingContext rc) {
 		pgClient.getConnection(ar -> {
 			if (ar.succeeded()) {
@@ -201,9 +253,9 @@ public class MainVerticle extends AbstractVerticle {
 					if (arCID.succeeded()) {						
 						Row row = arCID.result().iterator().next();
 						JsonObject category = new JsonObject()
-								.put("category_id", row.getLong(0))
-								.put("name", row.getString(1))
-								.put("is_deleted", row.getBoolean(2));
+							.put("category_id", row.getLong(0))
+							.put("name", row.getString(1))
+							.put("is_deleted", row.getBoolean(2));
 						
 						LOGGER.info("Succeeded in quering category by id!");
 						rc.response().setStatusCode(200);
@@ -220,49 +272,51 @@ public class MainVerticle extends AbstractVerticle {
 		});
 	}
 	
+
 	private void createCategoryHandler(RoutingContext rc) {
-		Category category = rc.getBodyAsJson().mapTo(Category.class);
-		connect().compose(conn -> createCategory(conn, category, true))
-				 .setHandler(created(rc));			
+		// TODO:implement it
+		String name = rc.request().getParam("name");
+		Boolean isDeleted  = Boolean.valueOf(rc.request().getParam("is_deleted"));
+		createCategoryJooq(queryExecutor, name, isDeleted).setHandler(ok(rc));		
 	}
 	
-	private Future<Category> createCategory(SqlConnection conn, Category category, boolean closeConnection) {
-		Promise<Category> promise = Promise.promise();
-		conn.preparedQuery(CREATE_CATEGORY_SQL, Tuple.of(category.getName(), category.getIsDeleted()), save -> {
-			if (closeConnection) {
-				conn.close();
-			}			
-			int id = save.result().iterator().next().getInteger(0);						
-			Category cat = new Category(id, category.getName(), category.getIsDeleted());
-			
-			promise.handle(Future.succeededFuture(cat));
-		});
-		return promise.future();
+	private Future<Integer> createCategoryJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
+			String name, boolean isDeleted) {
+		//TODO: fix this!!!
+//		Future<QueryResult> retVal = queryExecutor.query(dsl -> dsl
+//			.insertInto(Category.CATEGORY)
+//			.columns(Category.CATEGORY.NAME, Category.CATEGORY.IS_DELETED)
+//			.values(name, isDeleted)
+//			.returningResult(Category.CATEGORY.CATEGORY_ID, Category.CATEGORY.NAME, Category.CATEGORY.IS_DELETED)
+//		);		
+		return null;
 	}
-	
-	// TODO: edit next 2 following methods for UPDATING Category to use Reactive-Classic-jOOQ implementation !!! 
+	 
+
+	// TODO: Before testing ADJUST Connection (before it was connect() method) so it
+	// can run properly
 	private void updateCategoryHandler(RoutingContext rc) {
-		int id = Integer.valueOf(rc.request().getParam("id"));
-		Category category = rc.getBodyAsJson().mapTo(Category.class);
-		connect().compose(connection -> updateCategory(connection, category, id))
-				 .setHandler(noContent(rc));
+		long id = (long) Integer.valueOf(rc.request().getParam("id"));
+		ICategory iCat = new com.ns.vertx.pg.jooq.tables.pojos.Category().fromJson(new JsonObject()
+			.put("category_id", rc.request().getParam("category_id"))
+			.put("name", rc.request().getParam("name"))
+			.put("is_deleted", rc.request().getParam("is_deleted")));
+		com.ns.vertx.pg.jooq.tables.pojos.Category categoryPojo = new com.ns.vertx.pg.jooq.tables.pojos.Category(iCat);
+		updateCategoryJooq(queryExecutor, categoryPojo, id).setHandler(ok(rc));
+	}
+
+	
+	private Future<Integer> updateCategoryJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
+			com.ns.vertx.pg.jooq.tables.pojos.Category categoryPOJO, long id) {
+		
+		Future<Integer> retVal = queryExecutor.execute(dsl -> dsl.update(Category.CATEGORY)
+			.set(Category.CATEGORY.NAME, categoryPOJO.getName())
+			.set(Category.CATEGORY.IS_DELETED, categoryPOJO.getIsDeleted())
+			.where(Category.CATEGORY.CATEGORY_ID.eq(Long.valueOf(id))));
+		
+		return retVal;
 	}
 	
-	private Future<Void> updateCategory(SqlConnection connection, Category category, int id) {
-		Promise<Void> promise = Promise.promise();
-		connection.preparedQuery(UPDATE_CATEGORY_SQL, Tuple.of(category.getName(), category.getIsDeleted(), id), update -> {
-			if (update.succeeded()) {
-				Row row = update.result().iterator().next();
-				LOGGER.info("Category id = " + row.getLong(0) + ", name = " + category.getName() 
-								+ ", is_deleted = " + category.getIsDeleted() + " has been updated!");
-				promise.handle(Future.succeededFuture());
-			} else {				
-				promise.handle(Future.failedFuture(update.cause()));
-			}
-		});
-		
-		return promise.future();
-	}
 	
 	private Future<Void> deleteCategory(SqlConnection connection, int id) {
 		Promise<Void> promise = Promise.promise();

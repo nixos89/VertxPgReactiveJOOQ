@@ -3,9 +3,5 @@ target
 /.classpath
 /.project
 /komande.txt
-/.attach_pid12929
-/.attach_pid24818
-/.attach_pid3783
-/.attach_pid4538
-/.attach_pid6166
-/.attach_pid6223
+src/main/java/com/ns/vertx/pg/examples
+/.attach_pid*

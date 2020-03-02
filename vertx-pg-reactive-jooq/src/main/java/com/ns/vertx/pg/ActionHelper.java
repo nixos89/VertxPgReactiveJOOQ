@@ -8,7 +8,6 @@ import io.vertx.core.json.Json;
 import io.vertx.ext.web.RoutingContext;
 
 public class ActionHelper {
-
 	
 	private static <T> Handler<AsyncResult<T>> writeJsonResponse(RoutingContext context, int status) {
 		return ar -> {
@@ -19,9 +18,10 @@ public class ActionHelper {
 					context.fail(ar.cause());
 				}
 			} else {
-				context.response().setStatusCode(status)
-						.putHeader("content-type", "application/json; charset=utf-8")
-						.end(Json.encodePrettily(ar.result()));
+				context.response()
+					.setStatusCode(status)
+					.putHeader("content-type", "application/json; charset=utf-8")
+					.end(Json.encodePrettily(ar.result()));
 			}
 		};
 	}

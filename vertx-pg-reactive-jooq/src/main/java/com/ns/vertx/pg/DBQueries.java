@@ -22,7 +22,7 @@ public class DBQueries {
 	// create tables::END	
 	
 	// Category CRUD queries
-	public static String GET_ALL_CATEGORIES_SQL = "SELECT category_id, name, is_deleted FROM Category;";
+	public static String GET_ALL_CATEGORIES_SQL = "SELECT category_id, name, is_deleted FROM Category ORDER BY category_id ASC;";
 	public static String GET_CATEGORY_BY_ID_SQL = "SELECT category_id, name, is_deleted FROM Category WHERE category_id = $1;";
 	public static String CREATE_CATEGORY_SQL = "INSERT INTO Category (name, is_deleted) VALUES($1, $2) RETURNING category_id;";
 	public static String UPDATE_CATEGORY_SQL = "UPDATE Category SET name = $1, is_deleted = $2 WHERE category_id = $3 RETURNING category_id;"; 
