@@ -1,6 +1,6 @@
-package com.ns.vertx.pg;
+package com.ns.vertx.pg.examples;
 
-import static com.ns.vertx.pg.ActionHelper.*;
+import static com.ns.vertx.pg.examples.ActionHelper.*;
 import static com.ns.vertx.pg.DBQueries.*;
 
 import java.util.NoSuchElementException;
@@ -11,6 +11,7 @@ import org.jooq.impl.DefaultConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ns.vertx.pg.DBQueries;
 import com.ns.vertx.pg.jooq.tables.Category;
 import com.ns.vertx.pg.jooq.tables.daos.CategoryDao;
 import com.ns.vertx.pg.jooq.tables.interfaces.ICategory;
@@ -33,9 +34,9 @@ import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.SqlConnection;
 import io.vertx.sqlclient.Tuple;
 
-public class MainVerticle_Backup extends AbstractVerticle {
+public class HttpVerticle_Backup extends AbstractVerticle {
 
-	private final static Logger LOGGER = LoggerFactory.getLogger(MainVerticle_Backup.class);
+	private final static Logger LOGGER = LoggerFactory.getLogger(HttpVerticle_Backup.class);
 	private static int LISTEN_PORT = 8080;
 
 	private PgPool pgClient;
@@ -349,7 +350,7 @@ public class MainVerticle_Backup extends AbstractVerticle {
 
 	private void deleteCategoryHandler(RoutingContext rc) {
 		int id = Integer.valueOf(rc.request().getParam("id"));
-		connect().compose(connection -> deleteCategory(connection, id)).setHandler(noContent(rc));
+//		connect().compose(connection -> deleteCategory(connection, id)).setHandler(noContent(rc));
 	}
 
 }

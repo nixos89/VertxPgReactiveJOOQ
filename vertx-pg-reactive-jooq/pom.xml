@@ -68,7 +68,7 @@
 		<dependency>
 			<groupId>io.github.jklingsporn</groupId>
 			<artifactId>vertx-jooq-classic-reactive</artifactId>
-			<version>5.0.1</version>
+			<version>5.0.1</version> <!-- CHANGE to 5.1.1 -->
 		</dependency>
 		<!-- added for jooq reactive dependencies::END -->
 	</dependencies>
@@ -194,7 +194,7 @@
 					<dependency>
 						<groupId>io.github.jklingsporn</groupId>
 						<artifactId>vertx-jooq-generate</artifactId>
-						<version>5.0.1</version>
+						<version>5.0.1</version> <!-- CHANGE to 5.1.1 -->
 					</dependency>
 				</dependencies>
 

@@ -1,64 +1,79 @@
 package com.ns.vertx.pg;
 
 
-import com.ns.vertx.pg.jooq.tables.pojos.Book;
-
 import static com.ns.vertx.pg.jooq.tables.Book.BOOK;
+import static com.ns.vertx.pg.jooq.tables.CategoryBook.CATEGORY_BOOK;
+import static com.ns.vertx.pg.jooq.tables.AuthorBook.AUTHOR_BOOK;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ns.vertx.pg.jooq.tables.daos.AuthorBookDao;
+import com.ns.vertx.pg.jooq.tables.daos.BookDao;
+import com.ns.vertx.pg.jooq.tables.daos.CategoryBookDao;
+import com.ns.vertx.pg.jooq.tables.pojos.AuthorBook;
+import com.ns.vertx.pg.jooq.tables.pojos.Book;
+import com.ns.vertx.pg.jooq.tables.pojos.CategoryBook;
+
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
+
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-/* This class holds STATIC methods which are used as helper methods for routing in order to reduce 
- * boiler-plate code from MainVerticle class */
+
 public class BookJooqQueries {	
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(BookJooqQueries.class);	
-	
-	static JsonObject fillBook(QueryResult booksQR) {
-		JsonArray authors = booksQR.get("aut_ids", JsonArray.class);				
-		JsonArray categories = booksQR.get("cat_ids", JsonArray.class);
-		LOGGER.info("(fillBook) authors = " + authors.encodePrettily());
-		LOGGER.info("(fillBook) categories = " + categories.encodePrettily());
-
+	 
+	// NOTE: using QueryResult as generic and driver agnostic response is a very good thing.
+	// from https://github.com/jklingsporn/vertx-jooq/issues/120#issuecomment-533879183
+	private static JsonObject fillBook(QueryResult booksQR) {
 		return new JsonObject()
 			.put("bookId", booksQR.get("b_id", Long.class))
 			.put("title", booksQR.get("title", String.class))
 			.put("price", booksQR.get("price", Double.class))
 			.put("amount", booksQR.get("amount", Integer.class))
 			.put("isDeleted", booksQR.get("is_deleted", Boolean.class))
-			.put("authors", authors)
-			.put("categories", categories);				
+			.put("authors", booksQR.get("authors", JsonArray.class))
+			.put("categories", booksQR.get("categories", JsonArray.class));				
 	}
 	
-	// FIXME:
-//	static List<JsonObject>
+	private static JsonObject extractBooksFromQR(QueryResult queryResult){
+		JsonArray booksJA = new JsonArray();
+		for(QueryResult qr: queryResult.asList()) {
+			JsonObject book = fillBook(qr);
+			booksJA.add(book);
+		}
+		return new JsonObject().put("books", booksJA);
+	}
+	
 	
 	static Future<JsonObject> getBookByIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long book_id) {
 		Promise<JsonObject> finalRes = Promise.promise();
+		/* TODO: might want to check into https://www.jooq.org/doc/3.11/manual/sql-building/bind-values/sql-injection/
+		 *   ...to use dsl.fetch(SQL_QUERY, bindingParam) instead of dls.resultQuery */
 		Future<QueryResult> bookFuture = queryExecutor.query(dsl -> dsl
-		    	.resultQuery(DBQueries.GET_BOOK_BY_BOOK_ID_VER4, Long.valueOf(book_id)));
+		    	.resultQuery(DBQueries.GET_BOOK_BY_BOOK_ID, Long.valueOf(book_id)));
 	    
 	    bookFuture.setHandler(handler -> {
 			if (handler.succeeded()) {
 				LOGGER.info("Success, query has passed for book ID = " + book_id);												
 				QueryResult booksQR = handler.result();				
-				JsonObject bookJsonObject = fillBook(booksQR);
-				
-				LOGGER.info("bookJsonObject.encodePrettily(): " + bookJsonObject.encodePrettily());
-				LOGGER.info("Success, ABOUT to complete result for for book ID = " + book_id + " ...");
+				JsonObject bookJsonObject = fillBook(booksQR);				
 				finalRes.complete(bookJsonObject);
 	    	} else {
 	    		LOGGER.error("Error, something failed in retrivening query by book_id = " + book_id +
-	    				" ! Cause: " + handler.cause().getMessage());
+	    				" ! Cause: " + handler.cause());
 	    		finalRes.fail(handler.cause());
 	    	}
 	    }); 
@@ -66,20 +81,15 @@ public class BookJooqQueries {
 		return finalRes.future();
 	}
 	
+	// ***************************************************************************************************************
 	
 	static Future<JsonObject> getAllBooksJooq(ReactiveClassicGenericQueryExecutor queryExecutor) {
-		Promise<JsonObject> finalRes = Promise.promise();
-		
-		/* FIXME: make sure that this query returns as SINGLE Row, not as multiple rows!!!
-		 * Research for 'ARRAY_AGG' function implementation in (vertx-)jOOQ */ 
-		Future<QueryResult> bookFuture = queryExecutor.query(dsl -> dsl
-		    	.resultQuery(DBQueries.GET_ALL_BOOKS));
-	    
+		Promise<JsonObject> finalRes = Promise.promise();					
+		Future<QueryResult> bookFuture = queryExecutor.query(dsl -> dsl.resultQuery(DBQueries.GET_ALL_BOOKS));	    
 	    bookFuture.setHandler(handler -> {
-			if (handler.succeeded()) {
-				LOGGER.info("Success, query has passed for all books!");												
+			if (handler.succeeded()) {								
 				QueryResult booksQR = handler.result();				
-				JsonObject booksJsonObject = fillBook(booksQR);
+				JsonObject booksJsonObject = extractBooksFromQR(booksQR);
 				LOGGER.info("bookJsonObject.encodePrettily(): " + booksJsonObject.encodePrettily());
 				finalRes.complete(booksJsonObject);
 	    	} else {
@@ -92,72 +102,223 @@ public class BookJooqQueries {
 		return finalRes.future();
 	}
 	
+	// ***************************************************************************************************************
 	
-	static Future<Integer> createBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
-			String title, double price, int amount, boolean isDeleted
-			/*, Set<Long> authorIds, Set<Long> categoryIds*/) {
-		Future<Integer> retVal = queryExecutor.execute(dsl -> dsl
-			.insertInto(BOOK, BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED)
-			.values(title, price, amount, isDeleted)
-			.returningResult(BOOK.BOOK_ID, BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED)
-		);
-		return retVal;
+	static Future<JsonObject> createBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
+			BookDao bookDAO, AuthorBookDao authorBookDAO, CategoryBookDao categoryBookDAO, JsonObject bookJO) {
+		Promise<JsonObject> promise = Promise.promise();			
+		Book bookPojo = new Book(bookJO);		
+		
+		Future<Long> futureBookDao = bookDAO.insertReturningPrimary(bookPojo);
+		futureBookDao.setHandler(handler -> {
+			if (handler.succeeded()) {
+				Long bookId = handler.result();
+				
+				Set<Long> authorUpdatedIds = bookJO.getJsonArray("author_ids").stream()
+						.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());		
+				Set<Long> categoryUpdatedIds = bookJO.getJsonArray("category_ids").stream()
+						.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());	
+				
+				Set<AuthorBook> bookAuthors = new HashSet<>();
+				Set<CategoryBook> bookCategories = new HashSet<>();
+				
+				for (Long authorId : authorUpdatedIds) {
+					AuthorBook ab = new AuthorBook(authorId, bookId);
+					bookAuthors.add(ab);					
+				}				
+				
+				for (Long catId : categoryUpdatedIds) {
+					CategoryBook cb = new CategoryBook(catId, bookId);
+					bookCategories.add(cb);					
+				}
+				
+				authorBookDAO.insert(bookAuthors);
+				categoryBookDAO.insert(bookCategories);
+				
+				bookJO.put("book_id", bookId);									
+				promise.complete(bookJO);
+			} else {
+				LOGGER.error("Error, insertion of book failed! Cause: " + handler.cause());
+				promise.fail(handler.cause());
+			}
+		});
+		
+		return promise.future();
 	}
 	
+	// ***************************************************************************************************************
 	
-	/* TODO: try out passing 'Set<Long> categoryIds' as param (IFF necessary check for @DataObject element) to 
-	 * method signature in order to JOIN Book and Category via 'CategoryBook' table */
-	static Future<JsonObject> createBookJooqRetVal(ReactiveClassicGenericQueryExecutor queryExecutor,
-			String title, double price, int amount, boolean isDeleted
-			/*, Set<Long> authorIds, Set<Long> categoryIds*/) {
-		Promise<JsonObject> promise = Promise.promise();
-		Future<Integer> retVal = queryExecutor.execute(dsl -> dsl
-			.insertInto(BOOK, BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED)
-			.values(title, price, amount, isDeleted)
-			.returningResult(BOOK.BOOK_ID, BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED)
-		);
-
-		retVal.setHandler(ar -> {
+	// try to solve this LATER with RxJava2 IFF you have ENOUGH time!!!
+	static Future<JsonObject> updateBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, JsonObject bookJO, 
+			BookDao bookDAO, AuthorBookDao authorBookDAO, CategoryBookDao categoryBookDAO, long bookId) {		
+		
+		Promise<JsonObject> promise = Promise.promise();				 
+		Set<Long> authorUpdatedIds = bookJO.getJsonArray("author_ids").stream()
+				.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());	
+		
+		Set<Long> categoryUpdatedIds = bookJO.getJsonArray("category_ids").stream()
+				.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());
+		
+		LOGGER.info("categoryUpdatedIds:");
+		categoryUpdatedIds.stream().forEach(System.out::println);
+		
+		Future<Integer> iterateCBFuture = iterateCategoryBook(queryExecutor, categoryBookDAO, categoryUpdatedIds, bookId);
+		Future<Integer> iterateABFuture = iterateAuthorBook(queryExecutor, authorBookDAO, authorUpdatedIds, bookId);
+		Future<Integer> updateBookFuture = bookDAO.update(new Book(bookJO)); // UPDATES Book
+		
+		iterateABFuture.compose(res -> iterateCBFuture).compose(res -> updateBookFuture).setHandler(ar -> {
 			if (ar.succeeded()) {
-				JsonObject result = new JsonObject()
-					.put("title", title)
-					.put("price", price)
-					.put("amount", amount)
-					.put("is_deleted", isDeleted);	
-				promise.complete(result);
+				LOGGER.info("Success, all went well!");
+				promise.complete(bookJO);
 			} else {
+				LOGGER.error("Error, something FAILED in composition of 3 Futures!!! Cause: " + ar.cause() );
 				promise.fail(ar.cause());
 			}
-		});				
+		});		
+
+		// TODO: try this CompositeFuture compFut = CompositeFuture.join(f1, f2);		
+		return promise.future();
+	}
+	
+	// ***************************************************************************************************************
+	
+	private static Future<Integer> iterateCategoryBook(ReactiveClassicGenericQueryExecutor queryExecutor, 
+			CategoryBookDao categoryBookDAO, Set<Long> categoryUpdatedIds, long bookId) {
+		Promise<Integer> promise = Promise.promise();
+		
+		Future<List<CategoryBook>> existingBCFuture = categoryBookDAO.findManyByBookId(Arrays.asList(bookId));		
+		existingBCFuture.setHandler(ar -> { // for DEBUGGING
+			if (ar.succeeded()) {
+				List<CategoryBook> existingBC = ar.result();
+				existingBC.stream().forEach(System.out::println);	
+				Set<Long> existingBCategoriesIds = existingBC.stream()
+						.map(cb -> cb.getCategoryId())
+						.collect(Collectors.toSet());
+				
+				Set<Long> deleteCategoryIdsSet = existingBCategoriesIds.stream()
+					.filter(catId -> !categoryUpdatedIds.contains(catId))
+					.collect(Collectors.toSet());			
+				
+				LOGGER.info("Going to DELETE next category ids:");
+				deleteCategoryIdsSet.stream().forEach(System.out::println);
+				
+				Future<Integer> deleteCategoryBookFuture = queryExecutor.execute(dsl -> dsl
+					.deleteFrom(CATEGORY_BOOK)
+					.where(CATEGORY_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
+					.and(CATEGORY_BOOK.CATEGORY_ID.in(deleteCategoryIdsSet))
+				);							
+
+				Set<Long> toInsertCategoryIdsSet = categoryUpdatedIds.stream()
+					.filter(catId -> !existingBCategoriesIds.contains(catId))
+					.collect(Collectors.toSet());
+				
+				LOGGER.info("Category IDs to insert:");
+				toInsertCategoryIdsSet.stream().forEach(System.out::println);
+				
+				Set<CategoryBook> bookCategories = new HashSet<>();				
+				for (Long catId : toInsertCategoryIdsSet) {
+					CategoryBook cb = new CategoryBook(catId, bookId);
+					bookCategories.add(cb);					
+				}
+				
+				Future<Integer> insertBCFuture = categoryBookDAO.insert(bookCategories);
+				deleteCategoryBookFuture.compose(res -> insertBCFuture).setHandler(finalRes -> {
+					if(finalRes.succeeded()) {
+						LOGGER.info("Success, ALL done!");
+						promise.complete(finalRes.result());
+					} else {
+						LOGGER.error("Error, something failed in deleteCategoryBookFuture.compose(..)! Cause: " + finalRes.cause());
+						promise.fail(finalRes.cause());
+					}
+				});								
+				promise.complete(1);
+			} else {
+				LOGGER.error("categoryBookDAO.findManyByBookId(bookIds) FAILED! Cause: " + ar.cause());
+				promise.fail(ar.cause());
+			}
+		});	
+		return promise.future();
+	}
+	
+	// ***************************************************************************************************************
+	
+	private static Future<Integer> iterateAuthorBook(ReactiveClassicGenericQueryExecutor queryExecutor, 
+			AuthorBookDao authorBookDAO, Set<Long> authorUpdatedIds, long bookId) {
+		Promise<Integer> promise = Promise.promise();
+		
+		Future<List<AuthorBook>> existingACFuture = authorBookDAO.findManyByBookId(Arrays.asList(bookId));		
+		existingACFuture.setHandler(ar -> { // for DEBUGGING
+			if (ar.succeeded()) {				
+				List<AuthorBook> existingAC = ar.result();
+				existingAC.stream().forEach(System.out::println);	
+				// FIXME: fix rest of code to adjust for AuthorBook
+				Set<Long> existingBAuhtorIds = existingAC.stream()
+						.map(ab -> ab.getAuthorId())
+						.collect(Collectors.toSet());
+				
+				Set<Long> deleteAuthorIdsSet = existingBAuhtorIds.stream()
+					.filter(autId -> !authorUpdatedIds.contains(autId))
+					.collect(Collectors.toSet());			
+				
+				LOGGER.info("Author IDs to DELETE:");
+				deleteAuthorIdsSet.stream().forEach(System.out::println);
+				
+				Future<Integer> deleteAuthorBookFuture = queryExecutor.execute(dsl -> dsl
+					.deleteFrom(AUTHOR_BOOK)
+					.where(AUTHOR_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
+					.and(AUTHOR_BOOK.AUTHOR_ID.in(deleteAuthorIdsSet))
+				);							
+
+				Set<Long> toInsertAuthorIdsSet = authorUpdatedIds.stream()
+					.filter(catId -> !existingBAuhtorIds.contains(catId))
+					.collect(Collectors.toSet());
+				
+				LOGGER.info("Author IDs to insert:");
+				toInsertAuthorIdsSet.stream().forEach(System.out::println);
+				
+				Set<AuthorBook> bookAuthors = new HashSet<>();				
+				for (Long autId : toInsertAuthorIdsSet) {
+					AuthorBook ab = new AuthorBook(autId, bookId);
+					bookAuthors.add(ab);					
+				}
+				
+				Future<Integer> insertBAFuture = authorBookDAO.insert(bookAuthors);
+				// FIXME: by this advice https://stackoverflow.com/a/52506233/6805866
+				deleteAuthorBookFuture.compose(res -> insertBAFuture).setHandler(finalRes -> {
+					if(finalRes.succeeded()) {
+						LOGGER.info("Success, ALL done!");
+						promise.complete();
+					} else {
+						LOGGER.error("Error, something failed in deleteAuthorBookFuture.compose(..)! Cause: " + finalRes.cause());
+						promise.fail(finalRes.cause());
+					}
+				});								
+				promise.complete();
+			} else {
+				LOGGER.error("authorBookDAO.findManyByBookId(bookIds) FAILED! Cause: " + ar.cause());
+				promise.fail(ar.cause());
+			}
+		});	
 		return promise.future();
 	}
 	
 	
-	static Future<Integer> updateBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
-			Book book, long id) {
-
-		Future<Integer> retVal = queryExecutor.execute(dsl -> dsl
-			.update(BOOK)
-			.set(BOOK.TITLE, book.getTitle())
-			.set(BOOK.PRICE, book.getPrice())
-			.set(BOOK.AMOUNT, book.getAmount())
-			.set(BOOK.IS_DELETED, book.getIsDeleted())
-			.where(BOOK.BOOK_ID.eq(Long.valueOf(id)))
-		);
-		return retVal;
-	}
 	
+	// ***************************************************************************************************************
 	
 	static Future<Void> deleteBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long id) {
 		Promise<Void> promise = Promise.promise();
-		Future<Integer> retVal =  queryExecutor.execute(dsl -> dsl
+		Future<Integer> deleteBookFuture =  queryExecutor.execute(dsl -> dsl
 			.delete(BOOK)
 			.where(BOOK.BOOK_ID.eq(Long.valueOf(id)))
 		);
-		retVal.setHandler(ar -> {
-			if(ar.succeeded()) {
+
+		deleteBookFuture.setHandler(ar -> {
+			if (ar.succeeded()) {
+				LOGGER.info("Success, deletion successful for Book id = " + id);
 				promise.handle(Future.succeededFuture());
 			} else {
+				LOGGER.error("Error, deletion failed for Book id = " + id);
 				promise.handle(Future.failedFuture(new NoSuchElementException("No book with id = " + id)));
 			}
 		});

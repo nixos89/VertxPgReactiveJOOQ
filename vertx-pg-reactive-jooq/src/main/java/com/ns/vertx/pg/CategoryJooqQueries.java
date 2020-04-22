@@ -101,7 +101,7 @@ public class CategoryJooqQueries {
 		return promise.future();
 	}
 	
-	
+
 	static Future<Integer> updateCategoryJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
 			com.ns.vertx.pg.jooq.tables.pojos.Category categoryPOJO, long id) {
 
@@ -114,7 +114,7 @@ public class CategoryJooqQueries {
 		return retVal;
 	}
 	
-	
+
 	static Future<Void> deleteCategoryJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long id) {
 		Promise<Void> promise = Promise.promise();
 		Future<Integer> retVal =  queryExecutor.execute(dsl -> dsl
