@@ -4,4 +4,8 @@ target
 /.project
 /komande.txt
 src/main/java/com/ns/vertx/pg/examples
-/.attach_pid*
+/.attach_pid**
+/.dbeaver
+/.sts4**
+/lib
+../libs/**

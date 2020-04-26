@@ -39,11 +39,11 @@ public class BookJooqQueries {
 	// from https://github.com/jklingsporn/vertx-jooq/issues/120#issuecomment-533879183
 	private static JsonObject fillBook(QueryResult booksQR) {
 		return new JsonObject()
-			.put("bookId", booksQR.get("b_id", Long.class))
+			.put("book_id", booksQR.get("b_id", Long.class))
 			.put("title", booksQR.get("title", String.class))
 			.put("price", booksQR.get("price", Double.class))
 			.put("amount", booksQR.get("amount", Integer.class))
-			.put("isDeleted", booksQR.get("is_deleted", Boolean.class))
+			.put("is_deleted", booksQR.get("is_deleted", Boolean.class))
 			.put("authors", booksQR.get("authors", JsonArray.class))
 			.put("categories", booksQR.get("categories", JsonArray.class));				
 	}
@@ -55,8 +55,7 @@ public class BookJooqQueries {
 			booksJA.add(book);
 		}
 		return new JsonObject().put("books", booksJA);
-	}
-	
+	}	
 	
 	static Future<JsonObject> getBookByIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long book_id) {
 		Promise<JsonObject> finalRes = Promise.promise();
@@ -134,7 +133,7 @@ public class BookJooqQueries {
 				
 				authorBookDAO.insert(bookAuthors);
 				categoryBookDAO.insert(bookCategories);
-				
+
 				bookJO.put("book_id", bookId);									
 				promise.complete(bookJO);
 			} else {
@@ -300,9 +299,7 @@ public class BookJooqQueries {
 			}
 		});	
 		return promise.future();
-	}
-	
-	
+	}	
 	
 	// ***************************************************************************************************************
 	

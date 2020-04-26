@@ -27,6 +27,20 @@ public class CategoryJooqQueries {
 				.put("is_deleted", row.getBoolean(2));
 	}
 	
+	static JsonObject convertListOfRowsToJO(List<Row> rowList) {
+		JsonArray categoriesArr = new JsonArray();
+		Iterator<Row> ir = rowList.iterator();		
+		while(ir.hasNext()) {			
+			Row row = ir.next();
+			JsonObject category = fillCategory(row);
+			LOGGER.info("category:\n" + category.encodePrettily());
+			categoriesArr.add(category);
+		}
+		JsonObject categoriesFinal = new JsonObject();
+		categoriesFinal.put("categories", categoriesArr);
+		return categoriesFinal;
+	}
+	
 	static Future<JsonObject> getCategoryByIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long id) {
 		Promise<JsonObject> finalRes = Promise.promise();
 	    Future<Row> qr = queryExecutor.findOneRow(dsl -> dsl
@@ -44,23 +58,7 @@ public class CategoryJooqQueries {
 	    }); 
 		
 		return finalRes.future();
-	}
-	
-	
-	static JsonObject convertListOfRowsToJO(List<Row> rowList) {
-		JsonArray categoriesArr = new JsonArray();
-		Iterator<Row> ir = rowList.iterator();		
-		while(ir.hasNext()) {			
-			Row row = ir.next();
-			JsonObject category = fillCategory(row);
-			LOGGER.info("category:\n" + category.encodePrettily());
-			categoriesArr.add(category);
-		}
-		JsonObject categoriesFinal = new JsonObject();
-		categoriesFinal.put("categories", categoriesArr);
-		return categoriesFinal;
-	}
-	
+	}	
 	
 	static Future<JsonObject> getAllCategoriesJooq(ReactiveClassicGenericQueryExecutor queryExecutor) {
 		Promise<JsonObject> finalRes = Promise.promise();

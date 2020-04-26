@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import com.ns.vertx.pg.jooq.tables.daos.AuthorBookDao;
 import com.ns.vertx.pg.jooq.tables.daos.BookDao;
 import com.ns.vertx.pg.jooq.tables.daos.CategoryBookDao;
+import com.ns.vertx.pg.jooq.tables.daos.OrderItemDao;
+import com.ns.vertx.pg.jooq.tables.daos.OrdersDao;
 import com.ns.vertx.pg.jooq.tables.pojos.Category;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
@@ -40,28 +42,33 @@ public class HttpVerticle extends AbstractVerticle {
 	private BookDao bookDAO;
 	private AuthorBookDao authorBookDAO;
 	private CategoryBookDao categoryBookDAO;
+	private OrdersDao ordersDAO;
+	private OrderItemDao orderItemDAO;
 
 	@Override
 	public void start(Promise<Void> startPromise) throws Exception {
 		Router routerREST = Router.router(vertx);
-		
-		// CATEGORIES REST API
-		routerREST.get("/categories").handler(this::getAllCategoriesHandlerJooq);
-		routerREST.get("/categories/:id").handler(this::getCategoryByIdJooqHandler);
-		routerREST.delete("/categories/:id").handler(this::deleteCategoryHandler);
 		routerREST.post().handler(BodyHandler.create());
 		routerREST.put().handler(BodyHandler.create());
+		
+		// Categories REST API		
+		routerREST.get("/categories").handler(this::getAllCategoriesHandler);
+		routerREST.get("/categories/:id").handler(this::getCategoryByIdHandler);				
 		routerREST.post("/categories").handler(this::createCategoryHandler);
 		routerREST.put("/categories/:id").handler(this::updateCategoryHandler);
+		routerREST.delete("/categories/:id").handler(this::deleteCategoryHandler);
 
-		// BOOKS REST API		
+		// Books REST API		
 		routerREST.get("/books").handler(this::getAllBooksHandlerJooq);
 		routerREST.get("/books/:id").handler(this::getBookByIdHandler);		
-		routerREST.post().handler(BodyHandler.create());
-		routerREST.put().handler(BodyHandler.create());
 		routerREST.post("/books").handler(this::createBookHandler);
 		routerREST.put("/books/:id").handler(this::updateBookHandler);
 		routerREST.delete("/books/:id").handler(this::deleteBookHandler);
+		
+		// Orders REST API
+		// TODO: create HANDLER methods 
+		routerREST.get("/orders").handler(this::getAllOrdersHandler);
+		routerREST.post("/orders").handler(this::createOrderHandler);
 		
 		Router routerAPI = Router.router(vertx);
 		routerAPI.mountSubRouter("/api", routerREST);
@@ -84,9 +91,13 @@ public class HttpVerticle extends AbstractVerticle {
 		// setting up JOOQ configuration
 		Configuration configuration = new DefaultConfiguration();
 		configuration.set(SQLDialect.POSTGRES);
+		
+		// instantiating DAOs
 		bookDAO = new BookDao(configuration, pgClient);
 		authorBookDAO = new AuthorBookDao(configuration, pgClient);
 		categoryBookDAO = new CategoryBookDao(configuration, pgClient);
+		ordersDAO = new OrdersDao(configuration, pgClient);
+		orderItemDAO = new OrderItemDao(configuration, pgClient);
 
 		/* TODO: Check is DB conn CLOSED? Because of this 'DSLContext doesn't close the connection.' @:
 		 * https://www.jooq.org/doc/3.11/manual/getting-started/tutorials/jooq-in-7-steps/jooq-in-7-steps-step5/ */
@@ -102,12 +113,18 @@ public class HttpVerticle extends AbstractVerticle {
 				connection.close();
 				retFuture.handle(x.mapEmpty());
 			});
+			connection.exceptionHandler(handler -> {
+				LOGGER.error("Error occured in connection! Cause: " + handler.getCause());
+			});
 			return retFuture.future();
 		});
 		
 		futureConnection
 			.compose(v -> createHttpServer(pgClient, routerAPI))
 			.setHandler(startPromise);
+		
+//		createHttpServer(pgClient, routerAPI).setHandler(startPromise);
+		
 	}// start::END
 	// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++	
 	// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -117,6 +134,8 @@ public class HttpVerticle extends AbstractVerticle {
 		pgClient.getConnection(ar -> {
 			if (ar.succeeded()) {
 				promise.handle(ar.map(connection -> connection));
+			} else {
+				promise.fail(ar.cause());
 			}
 		});
 		return promise.future();
@@ -153,13 +172,13 @@ public class HttpVerticle extends AbstractVerticle {
 		return promise;
 	}
 
-	private void getAllCategoriesHandlerJooq(RoutingContext rc) {
+	private void getAllCategoriesHandler(RoutingContext rc) {
 		Future<JsonObject> future = CategoryJooqQueries.getAllCategoriesJooq(queryExecutor);
 		future.setHandler(ok(rc));		
 	}
 	
 	// FIXME: fix handling of NON-EXISTING 'category_id' which has been sent in HTTP GET request!!!
-	private void getCategoryByIdJooqHandler(RoutingContext rc) {
+	private void getCategoryByIdHandler(RoutingContext rc) {
 		long id = Long.valueOf(rc.request().getParam("id"));
 		Future<JsonObject> future = CategoryJooqQueries.getCategoryByIdJooq(queryExecutor, id);
 		future.setHandler(ok(rc));		
@@ -218,5 +237,13 @@ public class HttpVerticle extends AbstractVerticle {
 		BookJooqQueries.deleteBookJooq(queryExecutor, id).setHandler(noContent(rc));		
 	}
 	
+	private void getAllOrdersHandler(RoutingContext rc) {
+		OrdersJooqQueries.getAllOrdersJooq(queryExecutor).setHandler(ok(rc));
+	}
+
+	private void createOrderHandler(RoutingContext rc) {
+		JsonObject orderJO = rc.getBodyAsJson();
+//		OrdersJooqQueries.createOrdersJooq()
+	}
 
 }

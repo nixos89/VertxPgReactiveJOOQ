@@ -8,7 +8,7 @@ public class MainVerticle extends AbstractVerticle {
 	@Override
 	public void start(Promise<Void> startPromise) throws Exception {
 		Promise<String> httpVerticleDepoyment = Promise.promise();
-		vertx.deployVerticle(new HttpVerticle(), httpVerticleDepoyment);
+		vertx.deployVerticle(HttpVerticle.class.getName(), httpVerticleDepoyment);
 
 		httpVerticleDepoyment.future().setHandler(ar -> {
 			if (ar.succeeded()) {
