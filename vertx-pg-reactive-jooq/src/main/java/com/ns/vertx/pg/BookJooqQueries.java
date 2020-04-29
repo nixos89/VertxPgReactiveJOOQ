@@ -150,10 +150,10 @@ public class BookJooqQueries {
 			BookDao bookDAO, AuthorBookDao authorBookDAO, CategoryBookDao categoryBookDAO, long bookId) {		
 		
 		Promise<JsonObject> promise = Promise.promise();				 
-		Set<Long> authorUpdatedIds = bookJO.getJsonArray("author_ids").stream()
+		Set<Long> authorUpdatedIds = bookJO.getJsonArray("authors").stream()
 				.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());	
 		
-		Set<Long> categoryUpdatedIds = bookJO.getJsonArray("category_ids").stream()
+		Set<Long> categoryUpdatedIds = bookJO.getJsonArray("categories").stream()
 				.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());
 		
 		LOGGER.info("categoryUpdatedIds:");
@@ -163,7 +163,7 @@ public class BookJooqQueries {
 		Future<Integer> iterateABFuture = iterateAuthorBook(queryExecutor, authorBookDAO, authorUpdatedIds, bookId);
 		Future<Integer> updateBookFuture = bookDAO.update(new Book(bookJO)); // UPDATES Book
 		
-		iterateABFuture.compose(res -> iterateCBFuture).compose(res -> updateBookFuture).setHandler(ar -> {
+		iterateCBFuture.compose(res -> iterateABFuture).compose(res -> updateBookFuture).setHandler(ar -> {
 			if (ar.succeeded()) {
 				LOGGER.info("Success, all went well!");
 				promise.complete(bookJO);
@@ -183,7 +183,7 @@ public class BookJooqQueries {
 		Promise<Integer> promise = Promise.promise();
 		
 		Future<List<CategoryBook>> existingBCFuture = categoryBookDAO.findManyByBookId(Arrays.asList(bookId));		
-		existingBCFuture.setHandler(ar -> { // for DEBUGGING
+		existingBCFuture.setHandler(ar -> {
 			if (ar.succeeded()) {
 				List<CategoryBook> existingBC = ar.result();
 				existingBC.stream().forEach(System.out::println);	
@@ -195,7 +195,7 @@ public class BookJooqQueries {
 					.filter(catId -> !categoryUpdatedIds.contains(catId))
 					.collect(Collectors.toSet());			
 				
-				LOGGER.info("Going to DELETE next category ids:");
+				LOGGER.info("Going to DELETE next category ids: ");
 				deleteCategoryIdsSet.stream().forEach(System.out::println);
 				
 				Future<Integer> deleteCategoryBookFuture = queryExecutor.execute(dsl -> dsl
@@ -217,8 +217,7 @@ public class BookJooqQueries {
 					bookCategories.add(cb);					
 				}
 				
-				Future<Integer> insertBCFuture = categoryBookDAO.insert(bookCategories);
-				deleteCategoryBookFuture.compose(res -> insertBCFuture).setHandler(finalRes -> {
+				deleteCategoryBookFuture.compose(res -> categoryBookDAO.insert(bookCategories)).setHandler(finalRes -> {
 					if(finalRes.succeeded()) {
 						LOGGER.info("Success, ALL done!");
 						promise.complete(finalRes.result());
@@ -227,7 +226,7 @@ public class BookJooqQueries {
 						promise.fail(finalRes.cause());
 					}
 				});								
-				promise.complete(1);
+				promise.complete();
 			} else {
 				LOGGER.error("categoryBookDAO.findManyByBookId(bookIds) FAILED! Cause: " + ar.cause());
 				promise.fail(ar.cause());
@@ -279,7 +278,6 @@ public class BookJooqQueries {
 				}
 				
 				Future<Integer> insertBAFuture = authorBookDAO.insert(bookAuthors);
-				// FIXME:  https://stackoverflow.com/a/52506233/6805866
 				deleteAuthorBookFuture.compose(res -> insertBAFuture).setHandler(finalRes -> {
 					if(finalRes.succeeded()) {
 						LOGGER.info("Success, ALL done!");
