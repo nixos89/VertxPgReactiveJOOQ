@@ -12,6 +12,7 @@
 		<main.verticle>com.ns.vertx.pg.MainVerticle</main.verticle>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<jooq.version>3.11.9</jooq.version>
+		<vertx-jooq-classic-reactive.version>5.0.1</vertx-jooq-classic-reactive.version>
 	</properties>
 
 	<dependencyManagement>
@@ -68,7 +69,7 @@
 		<dependency>
 			<groupId>io.github.jklingsporn</groupId>
 			<artifactId>vertx-jooq-classic-reactive</artifactId>
-			<version>5.0.1</version> <!-- CHANGE to 5.1.1 -->
+			<version>${vertx-jooq-classic-reactive.version}</version>
 		</dependency>
 		<!-- added for jooq reactive dependencies::END -->
 	</dependencies>
@@ -194,7 +195,7 @@
 					<dependency>
 						<groupId>io.github.jklingsporn</groupId>
 						<artifactId>vertx-jooq-generate</artifactId>
-						<version>5.0.1</version> <!-- CHANGE to 5.1.1 -->
+						<version>${vertx-jooq-classic-reactive.version}</version>
 					</dependency>
 				</dependencies>
 

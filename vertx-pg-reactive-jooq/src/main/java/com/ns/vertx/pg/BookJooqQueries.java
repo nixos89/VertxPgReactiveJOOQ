@@ -201,7 +201,7 @@ public class BookJooqQueries {
 				CategoryBook cb = new CategoryBook(catId, bookId);
 				bookCategories.add(cb);
 			}
-			// FIXME: make sure that NO EMPTY collection of CategoryBook has been INSERTED/DELETED!!!
+
 			if (!deleteCategoryIdsSet.isEmpty() && !toInsertCategoryIdsSet.isEmpty()) {			
 				return queryExecutor.execute(dsl -> dsl
 						.deleteFrom(CATEGORY_BOOK)
