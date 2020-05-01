@@ -9,13 +9,14 @@ import com.ns.vertx.pg.jooq.tables.records.OrderItemRecord;
 
 import io.github.jklingsporn.vertx.jooq.shared.reactive.AbstractReactiveVertxDAO;
 
-import java.util.List;
+import java.util.Collection;
 
 import javax.annotation.Generated;
 
 import org.jooq.Configuration;
 
 
+import java.util.List;
 import io.vertx.core.Future;
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicQueryExecutor;
 /**
@@ -50,21 +51,21 @@ public class OrderItemDao extends AbstractReactiveVertxDAO<OrderItemRecord, com.
     /**
      * Find records that have <code>amount IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.OrderItem>> findManyByAmount(List<Integer> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.OrderItem>> findManyByAmount(Collection<Integer> values) {
         return findManyByCondition(OrderItem.ORDER_ITEM.AMOUNT.in(values));
     }
 
     /**
      * Find records that have <code>book_id IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.OrderItem>> findManyByBookId(List<Long> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.OrderItem>> findManyByBookId(Collection<Long> values) {
         return findManyByCondition(OrderItem.ORDER_ITEM.BOOK_ID.in(values));
     }
 
     /**
      * Find records that have <code>order_id IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.OrderItem>> findManyByOrderId(List<Long> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.OrderItem>> findManyByOrderId(Collection<Long> values) {
         return findManyByCondition(OrderItem.ORDER_ITEM.ORDER_ID.in(values));
     }
 

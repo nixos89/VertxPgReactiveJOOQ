@@ -9,13 +9,14 @@ import com.ns.vertx.pg.jooq.tables.records.AuthorRecord;
 
 import io.github.jklingsporn.vertx.jooq.shared.reactive.AbstractReactiveVertxDAO;
 
-import java.util.List;
+import java.util.Collection;
 
 import javax.annotation.Generated;
 
 import org.jooq.Configuration;
 
 
+import java.util.List;
 import io.vertx.core.Future;
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicQueryExecutor;
 /**
@@ -50,14 +51,14 @@ public class AuthorDao extends AbstractReactiveVertxDAO<AuthorRecord, com.ns.ver
     /**
      * Find records that have <code>first_name IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Author>> findManyByFirstName(List<String> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Author>> findManyByFirstName(Collection<String> values) {
         return findManyByCondition(Author.AUTHOR.FIRST_NAME.in(values));
     }
 
     /**
      * Find records that have <code>last_name IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Author>> findManyByLastName(List<String> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Author>> findManyByLastName(Collection<String> values) {
         return findManyByCondition(Author.AUTHOR.LAST_NAME.in(values));
     }
 

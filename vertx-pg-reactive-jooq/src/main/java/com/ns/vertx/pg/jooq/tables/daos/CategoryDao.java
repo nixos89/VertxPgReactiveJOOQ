@@ -9,13 +9,14 @@ import com.ns.vertx.pg.jooq.tables.records.CategoryRecord;
 
 import io.github.jklingsporn.vertx.jooq.shared.reactive.AbstractReactiveVertxDAO;
 
-import java.util.List;
+import java.util.Collection;
 
 import javax.annotation.Generated;
 
 import org.jooq.Configuration;
 
 
+import java.util.List;
 import io.vertx.core.Future;
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicQueryExecutor;
 /**
@@ -50,14 +51,14 @@ public class CategoryDao extends AbstractReactiveVertxDAO<CategoryRecord, com.ns
     /**
      * Find records that have <code>name IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Category>> findManyByName(List<String> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Category>> findManyByName(Collection<String> values) {
         return findManyByCondition(Category.CATEGORY.NAME.in(values));
     }
 
     /**
      * Find records that have <code>is_deleted IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Category>> findManyByIsDeleted(List<Boolean> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Category>> findManyByIsDeleted(Collection<Boolean> values) {
         return findManyByCondition(Category.CATEGORY.IS_DELETED.in(values));
     }
 

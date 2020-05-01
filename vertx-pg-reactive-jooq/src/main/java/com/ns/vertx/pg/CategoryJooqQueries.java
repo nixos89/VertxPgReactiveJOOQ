@@ -47,7 +47,7 @@ public class CategoryJooqQueries {
 	    		.selectFrom(Category.CATEGORY)
 	    		.where(Category.CATEGORY.CATEGORY_ID.eq(Long.valueOf(id)))	    		
 	    );
-	    qr.setHandler(handler -> {
+	    qr.onComplete(handler -> {
 			if (handler.succeeded()) {
 				Row row = handler.result();
 				JsonObject category = fillCategory(row);
@@ -66,7 +66,7 @@ public class CategoryJooqQueries {
 				.selectFrom(Category.CATEGORY)
 				.orderBy(Category.CATEGORY.CATEGORY_ID)
 		);
-		queryRes.setHandler(ar-> {
+		queryRes.onComplete(ar-> {
 			if (ar.succeeded()) {
 				List<Row> rowList = ar.result();				
 				JsonObject categoriesFinal = convertListOfRowsToJO(rowList);				
@@ -88,7 +88,7 @@ public class CategoryJooqQueries {
 				.values(name, isDeleted)
 				.returningResult(Category.CATEGORY.CATEGORY_ID, Category.CATEGORY.NAME, Category.CATEGORY.IS_DELETED)
 				);		
-		retVal.setHandler(ar -> {
+		retVal.onComplete(ar -> {
 			if (ar.succeeded()) {
 				JsonObject result = new JsonObject().put("name", name).put("is_deleted", isDeleted);
 				promise.complete(result);
@@ -100,16 +100,21 @@ public class CategoryJooqQueries {
 	}
 	
 
-	static Future<Integer> updateCategoryJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
+	static Future<Void> updateCategoryJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
 			com.ns.vertx.pg.jooq.tables.pojos.Category categoryPOJO, long id) {
-
+		Promise<Void> promise = Promise.promise();
 		Future<Integer> retVal = queryExecutor.execute(dsl -> dsl
 			.update(Category.CATEGORY)
 			.set(Category.CATEGORY.NAME, categoryPOJO.getName())
 			.set(Category.CATEGORY.IS_DELETED, categoryPOJO.getIsDeleted())
 			.where(Category.CATEGORY.CATEGORY_ID.eq(Long.valueOf(id)))
 		);
-		return retVal;
+		if (retVal.succeeded()) {
+			promise.complete();
+		} else {
+			promise.fail(retVal.cause());
+		}
+		return promise.future();
 	}
 	
 
@@ -119,7 +124,7 @@ public class CategoryJooqQueries {
 			.delete(Category.CATEGORY)
 			.where(Category.CATEGORY.CATEGORY_ID.eq(Long.valueOf(id)))
 		);
-		retVal.setHandler(ar -> {
+		retVal.onComplete(ar -> {
 			if(ar.succeeded()) {
 				promise.handle(Future.succeededFuture());
 			} else {

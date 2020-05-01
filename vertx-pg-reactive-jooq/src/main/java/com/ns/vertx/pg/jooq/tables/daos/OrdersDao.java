@@ -10,13 +10,14 @@ import com.ns.vertx.pg.jooq.tables.records.OrdersRecord;
 import io.github.jklingsporn.vertx.jooq.shared.reactive.AbstractReactiveVertxDAO;
 
 import java.sql.Date;
-import java.util.List;
+import java.util.Collection;
 
 import javax.annotation.Generated;
 
 import org.jooq.Configuration;
 
 
+import java.util.List;
 import io.vertx.core.Future;
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicQueryExecutor;
 /**
@@ -51,21 +52,21 @@ public class OrdersDao extends AbstractReactiveVertxDAO<OrdersRecord, com.ns.ver
     /**
      * Find records that have <code>total IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Orders>> findManyByTotal(List<Double> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Orders>> findManyByTotal(Collection<Double> values) {
         return findManyByCondition(Orders.ORDERS.TOTAL.in(values));
     }
 
     /**
      * Find records that have <code>order_date IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Orders>> findManyByOrderDate(List<Date> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Orders>> findManyByOrderDate(Collection<Date> values) {
         return findManyByCondition(Orders.ORDERS.ORDER_DATE.in(values));
     }
 
     /**
      * Find records that have <code>user_id IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Orders>> findManyByUserId(List<Integer> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Orders>> findManyByUserId(Collection<Integer> values) {
         return findManyByCondition(Orders.ORDERS.USER_ID.in(values));
     }
 

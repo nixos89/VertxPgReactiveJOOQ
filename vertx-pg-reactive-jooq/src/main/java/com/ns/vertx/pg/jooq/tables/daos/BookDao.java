@@ -9,13 +9,14 @@ import com.ns.vertx.pg.jooq.tables.records.BookRecord;
 
 import io.github.jklingsporn.vertx.jooq.shared.reactive.AbstractReactiveVertxDAO;
 
-import java.util.List;
+import java.util.Collection;
 
 import javax.annotation.Generated;
 
 import org.jooq.Configuration;
 
 
+import java.util.List;
 import io.vertx.core.Future;
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicQueryExecutor;
 /**
@@ -50,28 +51,28 @@ public class BookDao extends AbstractReactiveVertxDAO<BookRecord, com.ns.vertx.p
     /**
      * Find records that have <code>title IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Book>> findManyByTitle(List<String> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Book>> findManyByTitle(Collection<String> values) {
         return findManyByCondition(Book.BOOK.TITLE.in(values));
     }
 
     /**
      * Find records that have <code>price IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Book>> findManyByPrice(List<Double> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Book>> findManyByPrice(Collection<Double> values) {
         return findManyByCondition(Book.BOOK.PRICE.in(values));
     }
 
     /**
      * Find records that have <code>amount IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Book>> findManyByAmount(List<Integer> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Book>> findManyByAmount(Collection<Integer> values) {
         return findManyByCondition(Book.BOOK.AMOUNT.in(values));
     }
 
     /**
      * Find records that have <code>is_deleted IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Book>> findManyByIsDeleted(List<Boolean> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Book>> findManyByIsDeleted(Collection<Boolean> values) {
         return findManyByCondition(Book.BOOK.IS_DELETED.in(values));
     }
 

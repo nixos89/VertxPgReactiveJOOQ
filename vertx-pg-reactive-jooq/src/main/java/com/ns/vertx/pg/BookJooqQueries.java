@@ -62,12 +62,18 @@ public class BookJooqQueries {
 		Future<QueryResult> bookFuture = queryExecutor.query(dsl -> dsl
 		    	.resultQuery(DBQueries.GET_BOOK_BY_BOOK_ID, Long.valueOf(book_id)));
 	    
-	    bookFuture.setHandler(handler -> {
+	    bookFuture.onComplete(handler -> {
 			if (handler.succeeded()) {
 				LOGGER.info("Success, query has passed for book ID = " + book_id);												
 				QueryResult booksQR = handler.result();				
-				JsonObject bookJsonObject = fillBook(booksQR);				
-				finalRes.complete(bookJsonObject);
+				if(booksQR != null) {
+					JsonObject bookJsonObject = fillBook(booksQR);				
+					finalRes.complete(bookJsonObject);
+				} else {				
+					JsonObject resp = new JsonObject().put("message", "Book with id " + book_id + " does NOT exist in DB!");
+					finalRes.complete(resp);
+				}
+				
 	    	} else {
 	    		LOGGER.error("Error, something failed in retrivening query by book_id = " + book_id +
 	    				" ! Cause: " + handler.cause());
@@ -83,7 +89,7 @@ public class BookJooqQueries {
 	static Future<JsonObject> getAllBooksJooq(ReactiveClassicGenericQueryExecutor queryExecutor) {
 		Promise<JsonObject> finalRes = Promise.promise();					
 		Future<QueryResult> bookFuture = queryExecutor.query(dsl -> dsl.resultQuery(DBQueries.GET_ALL_BOOKS));	    
-	    bookFuture.setHandler(handler -> {
+	    bookFuture.onComplete(handler -> {
 			if (handler.succeeded()) {								
 				QueryResult booksQR = handler.result();				
 				JsonObject booksJsonObject = extractBooksFromQR(booksQR);
@@ -106,10 +112,9 @@ public class BookJooqQueries {
 		Book bookPojo = new Book(bookJO);		
 		
 		Future<Long> futureBookDao = bookDAO.insertReturningPrimary(bookPojo);
-		futureBookDao.setHandler(handler -> {
+		futureBookDao.onComplete(handler -> {
 			if (handler.succeeded()) {
 				Long bookId = handler.result();
-				
 				Set<Long> authorUpdatedIds = bookJO.getJsonArray("author_ids").stream()
 						.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());		
 				Set<Long> categoryUpdatedIds = bookJO.getJsonArray("category_ids").stream()
@@ -161,7 +166,7 @@ public class BookJooqQueries {
 		Future<Integer> iterateABFuture = iterateAuthorBook(queryExecutor, authorBookDAO, authorUpdatedIds, bookId);		
 		Future<Integer> updateBookFuture = bookDAO.update(new Book(bookJO)); // UPDATES Book
 		
-		iterateCBFuture.compose(res -> iterateABFuture).compose(res -> updateBookFuture).setHandler(ar -> {
+		iterateCBFuture.compose(res -> iterateABFuture).compose(res -> updateBookFuture).onComplete(ar -> {
 			if (ar.succeeded()) {
 				LOGGER.info("Success, all went well!");
 				promise.complete(bookJO);
@@ -278,7 +283,7 @@ public class BookJooqQueries {
 			.where(BOOK.BOOK_ID.eq(Long.valueOf(id)))
 		);
 
-		deleteBookFuture.setHandler(ar -> {
+		deleteBookFuture.onComplete(ar -> {
 			if (ar.succeeded()) {
 				LOGGER.info("Success, deletion successful for Book id = " + id);
 				promise.handle(Future.succeededFuture());

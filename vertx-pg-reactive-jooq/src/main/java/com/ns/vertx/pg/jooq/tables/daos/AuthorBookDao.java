@@ -9,7 +9,7 @@ import com.ns.vertx.pg.jooq.tables.records.AuthorBookRecord;
 
 import io.github.jklingsporn.vertx.jooq.shared.reactive.AbstractReactiveVertxDAO;
 
-import java.util.List;
+import java.util.Collection;
 
 import javax.annotation.Generated;
 
@@ -17,6 +17,7 @@ import org.jooq.Configuration;
 import org.jooq.Record2;
 
 
+import java.util.List;
 import io.vertx.core.Future;
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicQueryExecutor;
 /**
@@ -51,7 +52,7 @@ public class AuthorBookDao extends AbstractReactiveVertxDAO<AuthorBookRecord, co
     /**
      * Find records that have <code>book_id IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.AuthorBook>> findManyByBookId(List<Long> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.AuthorBook>> findManyByBookId(Collection<Long> values) {
         return findManyByCondition(AuthorBook.AUTHOR_BOOK.BOOK_ID.in(values));
     }
 

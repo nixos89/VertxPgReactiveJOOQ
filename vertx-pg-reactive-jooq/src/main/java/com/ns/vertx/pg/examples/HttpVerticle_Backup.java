@@ -28,6 +28,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
+import io.vertx.sqlclient.PreparedStatement;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowIterator;
 import io.vertx.sqlclient.RowSet;
@@ -186,8 +187,9 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 			if (ar1.succeeded()) {
 				LOGGER.info("Connected!");
 				SqlConnection conn = ar1.result();
-				conn.query(CREATE_CATEGORY_TABLE_SQL, rs -> {
+				conn.prepare(CREATE_CATEGORY_TABLE_SQL, rs -> {
 					if (rs.succeeded()) {
+						
 						promise.handle(rs.map(conn));
 					} else {
 						LOGGER.error("Error, executing 'create_category_table_sql' query failed!", rs.cause());
@@ -223,14 +225,16 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 		pgClient.getConnection(ar -> {
 			if (ar.succeeded()) {
 				SqlConnection sqlConnection = ar.result();
-				sqlConnection.query(GET_ALL_CATEGORIES_SQL, fetch -> {
+				sqlConnection.prepare(GET_ALL_CATEGORIES_SQL, fetch -> {
 					if (fetch.succeeded()) {
-						RowSet<Row> rs = fetch.result();
-						JsonObject categories = convertRowSetToJsonObject(rs);
-						rc.response().setStatusCode(303);
-						rc.response().putHeader("Content-Type", "application/json; UTF-8");
-						rc.response().end(categories.encodePrettily());
-
+						PreparedStatement ps = fetch.result();
+						ps.query().execute(handler -> {
+							RowSet<Row> rs = handler.result();
+							JsonObject categories = convertRowSetToJsonObject(rs);
+							rc.response().setStatusCode(303);
+							rc.response().putHeader("Content-Type", "application/json; UTF-8");
+							rc.response().end(categories.encodePrettily());
+						});
 						sqlConnection.close();
 					} else {
 						LOGGER.error("Error, connection not established! Cause: ", fetch.cause());
@@ -246,7 +250,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 			if (ar.succeeded()) {
 				SqlConnection conn = ar.result();
 				int id = Integer.valueOf(rc.request().getParam("id"));
-				conn.preparedQuery(GET_CATEGORY_BY_ID_SQL, Tuple.of(id), arCID -> {
+				conn.preparedQuery(GET_CATEGORY_BY_ID_SQL).execute(Tuple.of(id), arCID -> {
 					JsonObject responseJO = new JsonObject();
 					if (arCID.succeeded()) {
 						RowIterator<Row> ri = arCID.result().iterator();
@@ -318,7 +322,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 		JsonObject catJO = rc.getBodyAsJson(); // NOTE: Use this approach when extracting value from RECEIVED JSON!
 		ICategory iCat = new com.ns.vertx.pg.jooq.tables.pojos.Category().fromJson(catJO);
 		com.ns.vertx.pg.jooq.tables.pojos.Category categoryPojo = new com.ns.vertx.pg.jooq.tables.pojos.Category(iCat);
-		updateCategoryJooq(queryExecutor, categoryPojo, id).setHandler(ok(rc));
+		updateCategoryJooq(queryExecutor, categoryPojo, id).onComplete(ok(rc));
 	}
 
 	
@@ -337,7 +341,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 	
 	private Future<Void> deleteCategory(SqlConnection connection, int id) {
 		Promise<Void> promise = Promise.promise();
-		connection.preparedQuery(DBQueries.DELETE_CATEGORY_BY_ID_SQL, Tuple.of(id), fetch -> {
+		connection.preparedQuery(DBQueries.DELETE_CATEGORY_BY_ID_SQL).execute(Tuple.of(id), fetch -> {
 			if (fetch.succeeded()) {
 				promise.handle(Future.succeededFuture());
 			} else {

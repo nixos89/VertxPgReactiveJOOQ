@@ -10,7 +10,7 @@ public class MainVerticle extends AbstractVerticle {
 		Promise<String> httpVerticleDepoyment = Promise.promise();
 		vertx.deployVerticle(HttpVerticle.class.getName(), httpVerticleDepoyment);
 
-		httpVerticleDepoyment.future().setHandler(ar -> {
+		httpVerticleDepoyment.future().onComplete(ar -> {
 			if (ar.succeeded()) {
 				startPromise.complete();
 			} else {

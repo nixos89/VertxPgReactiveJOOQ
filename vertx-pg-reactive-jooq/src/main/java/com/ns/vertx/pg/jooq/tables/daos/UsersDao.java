@@ -9,13 +9,14 @@ import com.ns.vertx.pg.jooq.tables.records.UsersRecord;
 
 import io.github.jklingsporn.vertx.jooq.shared.reactive.AbstractReactiveVertxDAO;
 
-import java.util.List;
+import java.util.Collection;
 
 import javax.annotation.Generated;
 
 import org.jooq.Configuration;
 
 
+import java.util.List;
 import io.vertx.core.Future;
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicQueryExecutor;
 /**
@@ -50,42 +51,42 @@ public class UsersDao extends AbstractReactiveVertxDAO<UsersRecord, com.ns.vertx
     /**
      * Find records that have <code>first_name IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByFirstName(List<String> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByFirstName(Collection<String> values) {
         return findManyByCondition(Users.USERS.FIRST_NAME.in(values));
     }
 
     /**
      * Find records that have <code>last_name IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByLastName(List<String> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByLastName(Collection<String> values) {
         return findManyByCondition(Users.USERS.LAST_NAME.in(values));
     }
 
     /**
      * Find records that have <code>email IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByEmail(List<String> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByEmail(Collection<String> values) {
         return findManyByCondition(Users.USERS.EMAIL.in(values));
     }
 
     /**
      * Find records that have <code>username IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByUsername(List<String> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByUsername(Collection<String> values) {
         return findManyByCondition(Users.USERS.USERNAME.in(values));
     }
 
     /**
      * Find records that have <code>password IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByPassword(List<String> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByPassword(Collection<String> values) {
         return findManyByCondition(Users.USERS.PASSWORD.in(values));
     }
 
     /**
      * Find records that have <code>role_id IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByRoleId(List<Integer> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByRoleId(Collection<Integer> values) {
         return findManyByCondition(Users.USERS.ROLE_ID.in(values));
     }
 

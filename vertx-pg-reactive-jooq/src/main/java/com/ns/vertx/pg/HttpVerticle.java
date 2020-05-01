@@ -28,6 +28,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
+import io.vertx.sqlclient.PreparedStatement;
 import io.vertx.sqlclient.SqlConnection;
 
 
@@ -150,18 +151,24 @@ public class HttpVerticle extends AbstractVerticle {
 		return promise.future();
 	}
 
-	private Promise<SqlConnection> createTableIfNeeded(/* SqlConnection connection */) {
+	private Promise<SqlConnection> createTableIfNeeded() {
 		Promise<SqlConnection> promise = Promise.promise();
 		pgClient.getConnection(ar1 -> {
 			if (ar1.succeeded()) {
 				LOGGER.info("Connected!");
 				SqlConnection conn = ar1.result();
-				conn.query(CREATE_CATEGORY_TABLE_SQL, rs -> {
-					if (rs.succeeded()) {
-						promise.handle(rs.map(conn));
+				conn.prepare(CREATE_CATEGORY_TABLE_SQL, fetch -> {
+					if (fetch.succeeded()) {
+						PreparedStatement ps = fetch.result();
+						ps.query().execute(rs -> {
+							if (rs.succeeded()) {
+								promise.handle(rs.map(conn));
+							} else {
+								LOGGER.error("Error, executing 'create_category_table_sql' " 
+										+ "query failed!", rs.cause());
+							}
+						});
 					} else {
-						LOGGER.error("Error, executing 'create_category_table_sql' "
-								+ "query failed!", rs.cause());
 						conn.close();
 					}
 				});
@@ -174,7 +181,7 @@ public class HttpVerticle extends AbstractVerticle {
 
 	private void getAllCategoriesHandler(RoutingContext rc) {
 		Future<JsonObject> future = CategoryJooqQueries.getAllCategoriesJooq(queryExecutor);
-		future.setHandler(ok(rc));		
+		future.onComplete((ok(rc)));		
 	}
 	
 	// FIXME: fix handling of NON-EXISTING 'category_id' which has been sent in HTTP GET request!!!
@@ -189,10 +196,10 @@ public class HttpVerticle extends AbstractVerticle {
 		BookJooqQueries.getAllBooksJooq(queryExecutor).setHandler(ok(rc));		
 	}
 	
-	// FIXME: fix handling of NON-EXISTING 'book_id' which has been sent in HTTP GET request!!!
+
 	private void getBookByIdHandler(RoutingContext rc) {
 		long id = Long.valueOf(rc.request().getParam("id"));
-		BookJooqQueries.getBookByIdJooq(queryExecutor, id).setHandler(ok(rc));		
+		BookJooqQueries.getBookByIdJooq(queryExecutor, id).onComplete((ok(rc)));		
 	}
 	
 	
@@ -224,7 +231,7 @@ public class HttpVerticle extends AbstractVerticle {
 		JsonObject bookJO = rc.getBodyAsJson();
 		bookJO.put("book_id", id);
 		BookJooqQueries.updateBookJooq(queryExecutor, bookJO, bookDAO, authorBookDAO, categoryBookDAO, id)
-					   .setHandler(ok(rc));
+					   .onComplete( (ok(rc)) );
 	}
 	
 	private void deleteCategoryHandler(RoutingContext rc) {
