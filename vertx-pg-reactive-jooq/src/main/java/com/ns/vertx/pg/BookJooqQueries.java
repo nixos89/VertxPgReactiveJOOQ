@@ -1,13 +1,12 @@
 package com.ns.vertx.pg;
 
 
+import static com.ns.vertx.pg.jooq.tables.AuthorBook.AUTHOR_BOOK;
 import static com.ns.vertx.pg.jooq.tables.Book.BOOK;
 import static com.ns.vertx.pg.jooq.tables.CategoryBook.CATEGORY_BOOK;
-import static com.ns.vertx.pg.jooq.tables.AuthorBook.AUTHOR_BOOK;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -23,7 +22,6 @@ import com.ns.vertx.pg.jooq.tables.pojos.Book;
 import com.ns.vertx.pg.jooq.tables.pojos.CategoryBook;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
-
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -43,7 +41,7 @@ public class BookJooqQueries {
 			.put("title", booksQR.get("title", String.class))
 			.put("price", booksQR.get("price", Double.class))
 			.put("amount", booksQR.get("amount", Integer.class))
-			.put("is_deleted", booksQR.get("is_deleted", Boolean.class))
+			.put("deleted", booksQR.get("is_deleted", Boolean.class))
 			.put("authors", booksQR.get("authors", JsonArray.class))
 			.put("categories", booksQR.get("categories", JsonArray.class));				
 	}
@@ -160,7 +158,7 @@ public class BookJooqQueries {
 		categoryUpdatedIds.stream().forEach(System.out::println);
 		
 		Future<Integer> iterateCBFuture = iterateCategoryBook(queryExecutor, categoryBookDAO, categoryUpdatedIds, bookId);
-		Future<Integer> iterateABFuture = iterateAuthorBook(queryExecutor, authorBookDAO, authorUpdatedIds, bookId);
+		Future<Integer> iterateABFuture = iterateAuthorBook(queryExecutor, authorBookDAO, authorUpdatedIds, bookId);		
 		Future<Integer> updateBookFuture = bookDAO.update(new Book(bookJO)); // UPDATES Book
 		
 		iterateCBFuture.compose(res -> iterateABFuture).compose(res -> updateBookFuture).setHandler(ar -> {
@@ -176,125 +174,100 @@ public class BookJooqQueries {
 		return promise.future();
 	}
 	
+
 	// ***************************************************************************************************************
 	
-	private static Future<Integer> iterateCategoryBook(ReactiveClassicGenericQueryExecutor queryExecutor, 
+	private static Future<Integer> iterateCategoryBook(ReactiveClassicGenericQueryExecutor queryExecutor,
 			CategoryBookDao categoryBookDAO, Set<Long> categoryUpdatedIds, long bookId) {
-		Promise<Integer> promise = Promise.promise();
-		
-		Future<List<CategoryBook>> existingBCFuture = categoryBookDAO.findManyByBookId(Arrays.asList(bookId));		
-		existingBCFuture.setHandler(ar -> {
-			if (ar.succeeded()) {
-				List<CategoryBook> existingBC = ar.result();
-				existingBC.stream().forEach(System.out::println);	
-				Set<Long> existingBCategoriesIds = existingBC.stream()
-					.map(cb -> cb.getCategoryId())
-					.collect(Collectors.toSet());
-				
-				Set<Long> deleteCategoryIdsSet = existingBCategoriesIds.stream()
-					.filter(catId -> !categoryUpdatedIds.contains(catId))
-					.collect(Collectors.toSet());			
-				
-				LOGGER.info("Going to DELETE next category ids: ");
-				deleteCategoryIdsSet.stream().forEach(System.out::println);
-				
-				Future<Integer> deleteCategoryBookFuture = queryExecutor.execute(dsl -> dsl
-					.deleteFrom(CATEGORY_BOOK)
-					.where(CATEGORY_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
-					.and(CATEGORY_BOOK.CATEGORY_ID.in(deleteCategoryIdsSet))
-				);							
 
-				Set<Long> toInsertCategoryIdsSet = categoryUpdatedIds.stream()
-					.filter(catId -> !existingBCategoriesIds.contains(catId))
+		return categoryBookDAO.findManyByBookId(Arrays.asList(bookId)).compose(existingBC -> {
+			Set<Long> existingBCategoriesIds = existingBC.stream().map(cb -> cb.getCategoryId())
 					.collect(Collectors.toSet());
-				
-				LOGGER.info("Category IDs to insert:");
-				toInsertCategoryIdsSet.stream().forEach(System.out::println);
-				
-				Set<CategoryBook> bookCategories = new HashSet<>();				
-				for (Long catId : toInsertCategoryIdsSet) {
-					CategoryBook cb = new CategoryBook(catId, bookId);
-					bookCategories.add(cb);					
-				}
-				
-				deleteCategoryBookFuture.compose(res -> categoryBookDAO.insert(bookCategories)).setHandler(finalRes -> {
-					if(finalRes.succeeded()) {
-						LOGGER.info("Success, ALL done!");
-						promise.complete(finalRes.result());
-					} else {
-						LOGGER.error("Error, something failed in deleteCategoryBookFuture.compose(..)! Cause: " + finalRes.cause());
-						promise.fail(finalRes.cause());
-					}
-				});								
-				promise.complete();
-			} else {
-				LOGGER.error("categoryBookDAO.findManyByBookId(bookIds) FAILED! Cause: " + ar.cause());
-				promise.fail(ar.cause());
+
+			Set<Long> deleteCategoryIdsSet = existingBCategoriesIds.stream()
+					.filter(catId -> !categoryUpdatedIds.contains(catId)).collect(Collectors.toSet());
+
+			LOGGER.info("Going to DELETE next category IDs: ");
+			deleteCategoryIdsSet.stream().forEach(System.out::println);
+
+			Set<Long> toInsertCategoryIdsSet = categoryUpdatedIds.stream()
+					.filter(catId -> !existingBCategoriesIds.contains(catId)).collect(Collectors.toSet());
+
+			LOGGER.info("Category IDs to INSERT:");
+			toInsertCategoryIdsSet.stream().forEach(System.out::println);
+			
+			Set<CategoryBook> bookCategories = new HashSet<>();
+			for (Long catId : toInsertCategoryIdsSet) {
+				CategoryBook cb = new CategoryBook(catId, bookId);
+				bookCategories.add(cb);
 			}
-		});	
-		return promise.future();
-	}
+			// FIXME: make sure that NO EMPTY collection of CategoryBook has been INSERTED/DELETED!!!
+			if (!deleteCategoryIdsSet.isEmpty() && !toInsertCategoryIdsSet.isEmpty()) {			
+				return queryExecutor.execute(dsl -> dsl
+						.deleteFrom(CATEGORY_BOOK)
+						.where(CATEGORY_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
+						.and(CATEGORY_BOOK.CATEGORY_ID.in(deleteCategoryIdsSet)))
+					.compose(res -> categoryBookDAO.insert(bookCategories));				
+			} else if (toInsertCategoryIdsSet.isEmpty() && !deleteCategoryIdsSet.isEmpty()) {				
+				return queryExecutor.execute(dsl -> dsl
+						.deleteFrom(CATEGORY_BOOK)
+						.where(CATEGORY_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
+						.and(CATEGORY_BOOK.CATEGORY_ID.in(deleteCategoryIdsSet)));
+			} else if (!toInsertCategoryIdsSet.isEmpty() && deleteCategoryIdsSet.isEmpty()) {
+				return categoryBookDAO.insert(bookCategories);
+			} else {
+				return Future.succeededFuture();
+			}
+		});
+	}	
 	
 	// ***************************************************************************************************************
 	
-	private static Future<Integer> iterateAuthorBook(ReactiveClassicGenericQueryExecutor queryExecutor, 
+	private static Future<Integer> iterateAuthorBook(ReactiveClassicGenericQueryExecutor queryExecutor,
 			AuthorBookDao authorBookDAO, Set<Long> authorUpdatedIds, long bookId) {
-		Promise<Integer> promise = Promise.promise();
-		
-		Future<List<AuthorBook>> existingACFuture = authorBookDAO.findManyByBookId(Arrays.asList(bookId));		
-		existingACFuture.setHandler(ar -> {
-			if (ar.succeeded()) {				
-				List<AuthorBook> existingAC = ar.result();
-				existingAC.stream().forEach(System.out::println);	
 
-				Set<Long> existingBAuhtorIds = existingAC.stream()
-						.map(ab -> ab.getAuthorId())
-						.collect(Collectors.toSet());
-				
-				Set<Long> deleteAuthorIdsSet = existingBAuhtorIds.stream()
-					.filter(autId -> !authorUpdatedIds.contains(autId))
-					.collect(Collectors.toSet());			
-				
-				LOGGER.info("Author IDs to DELETE:");
-				deleteAuthorIdsSet.stream().forEach(System.out::println);
-				
-				Future<Integer> deleteAuthorBookFuture = queryExecutor.execute(dsl -> dsl
-					.deleteFrom(AUTHOR_BOOK)
-					.where(AUTHOR_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
-					.and(AUTHOR_BOOK.AUTHOR_ID.in(deleteAuthorIdsSet))
-				);							
+		return authorBookDAO.findManyByBookId(Arrays.asList(bookId)).compose(existingAC -> {
 
-				Set<Long> toInsertAuthorIdsSet = authorUpdatedIds.stream()
-					.filter(catId -> !existingBAuhtorIds.contains(catId))
-					.collect(Collectors.toSet());
-				
-				LOGGER.info("Author IDs to insert:");
-				toInsertAuthorIdsSet.stream().forEach(System.out::println);
-				
-				Set<AuthorBook> bookAuthors = new HashSet<>();				
-				for (Long autId : toInsertAuthorIdsSet) {
-					AuthorBook ab = new AuthorBook(autId, bookId);
-					bookAuthors.add(ab);					
-				}
-				
-				Future<Integer> insertBAFuture = authorBookDAO.insert(bookAuthors);
-				deleteAuthorBookFuture.compose(res -> insertBAFuture).setHandler(finalRes -> {
-					if(finalRes.succeeded()) {
-						LOGGER.info("Success, ALL done!");
-						promise.complete();
-					} else {
-						LOGGER.error("Error, something failed in deleteAuthorBookFuture.compose(..)! Cause: " + finalRes.cause());
-						promise.fail(finalRes.cause());
-					}
-				});								
-				promise.complete();
-			} else {
-				LOGGER.error("authorBookDAO.findManyByBookId(bookIds) FAILED! Cause: " + ar.cause());
-				promise.fail(ar.cause());
+			Set<Long> existingBAuhtorIds = existingAC.stream().map(ab -> ab.getAuthorId()).collect(Collectors.toSet());
+
+			Set<Long> deleteAuthorIdsSet = existingBAuhtorIds.stream()
+					.filter(autId -> !authorUpdatedIds.contains(autId)).collect(Collectors.toSet());
+
+			LOGGER.info("Author IDs to DELETE:");
+			deleteAuthorIdsSet.stream().forEach(System.out::println);
+
+			Set<Long> toInsertAuthorIdsSet = authorUpdatedIds.stream()
+					.filter(catId -> !existingBAuhtorIds.contains(catId)).collect(Collectors.toSet());
+
+			LOGGER.info("Author IDs to INSERT:");
+			toInsertAuthorIdsSet.stream().forEach(System.out::println);
+
+			Set<AuthorBook> bookAuthors = new HashSet<>();
+			for (Long autId : toInsertAuthorIdsSet) {
+				AuthorBook ab = new AuthorBook(autId, bookId);
+				bookAuthors.add(ab);
 			}
-		});	
-		return promise.future();
-	}	
+			
+			if (!toInsertAuthorIdsSet.isEmpty() && !deleteAuthorIdsSet.isEmpty()) {
+				return queryExecutor.execute(dsl -> dsl
+						.deleteFrom(AUTHOR_BOOK)
+						.where(AUTHOR_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
+						.and(AUTHOR_BOOK.AUTHOR_ID.in(deleteAuthorIdsSet))
+				).compose(res -> authorBookDAO.insert(bookAuthors));
+				
+			} else if (!toInsertAuthorIdsSet.isEmpty() && deleteAuthorIdsSet.isEmpty()) {
+				return authorBookDAO.insert(bookAuthors);
+			} else if (toInsertAuthorIdsSet.isEmpty() && !deleteAuthorIdsSet.isEmpty()) {
+				
+				return queryExecutor.execute(dsl -> dsl
+						.deleteFrom(AUTHOR_BOOK)
+						.where(AUTHOR_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
+						.and(AUTHOR_BOOK.AUTHOR_ID.in(deleteAuthorIdsSet)));
+			} else {
+				return Future.succeededFuture();
+			}			
+		});
+	}
 	
 	// ***************************************************************************************************************
 	
