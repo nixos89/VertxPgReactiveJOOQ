@@ -230,6 +230,8 @@ public class BookJooqQueries {
 	
 	private static Future<Integer> iterateAuthorBook(ReactiveClassicGenericQueryExecutor queryExecutor,
 			AuthorBookDao authorBookDAO, Set<Long> authorUpdatedIds, long bookId) {
+		
+//		queryExecutor.beginTransaction()
 
 		return authorBookDAO.findManyByBookId(Arrays.asList(bookId)).compose(existingAC -> {
 

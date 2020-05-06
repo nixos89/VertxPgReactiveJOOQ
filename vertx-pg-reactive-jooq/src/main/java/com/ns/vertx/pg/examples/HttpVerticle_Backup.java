@@ -17,7 +17,7 @@ import com.ns.vertx.pg.jooq.tables.daos.CategoryDao;
 import com.ns.vertx.pg.jooq.tables.interfaces.ICategory;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
-import io.vertx.core.AbstractVerticle;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -33,7 +33,10 @@ import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowIterator;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.SqlConnection;
+import io.vertx.sqlclient.Transaction;
 import io.vertx.sqlclient.Tuple;
+
+import io.vertx.core.AbstractVerticle;
 
 public class HttpVerticle_Backup extends AbstractVerticle {
 
@@ -181,7 +184,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 		return promise.future();
 	}
 
-	private Promise<SqlConnection> createTableIfNeeded(/* SqlConnection connection */) {
+	private Promise<SqlConnection> createTableIfNeeded() {
 		Promise<SqlConnection> promise = Promise.promise();
 		pgClient.getConnection(ar1 -> {
 			if (ar1.succeeded()) {
@@ -225,6 +228,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 		pgClient.getConnection(ar -> {
 			if (ar.succeeded()) {
 				SqlConnection sqlConnection = ar.result();
+				Transaction tx = sqlConnection.begin();
 				sqlConnection.prepare(GET_ALL_CATEGORIES_SQL, fetch -> {
 					if (fetch.succeeded()) {
 						PreparedStatement ps = fetch.result();

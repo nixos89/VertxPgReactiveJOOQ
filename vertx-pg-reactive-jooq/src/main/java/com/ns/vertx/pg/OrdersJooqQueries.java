@@ -17,7 +17,7 @@ public class OrdersJooqQueries {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(OrdersJooqQueries.class);
 	
-	// FIXME
+	// FIXME: adjust values for Order(S)!!!
 	private static JsonObject fillOrder(QueryResult booksQR) {
 		return new JsonObject()
 			.put("bookId", booksQR.get("b_id", Long.class))
@@ -51,7 +51,7 @@ public class OrdersJooqQueries {
 			.from(ORDERS)			
 		);	    
 		
-	    ordersFuture.setHandler(handler -> {
+	    ordersFuture.onComplete(handler -> {
 			if (handler.succeeded()) {								
 				QueryResult ordersQR = handler.result();				
 				JsonObject ordersJsonObject = extractOrderItemssFromQR(ordersQR);
