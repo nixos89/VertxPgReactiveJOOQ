@@ -80,14 +80,15 @@ public class CategoryJooqQueries {
 	
 	
 	static Future<JsonObject> createCategoryJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
-			String name, boolean isDeleted) {
-		
+			String name, boolean isDeleted) {		
 		Promise<JsonObject> promise = Promise.promise();		
 		Future<Integer> retVal = queryExecutor.execute(dsl -> dsl
 				.insertInto(Category.CATEGORY, Category.CATEGORY.NAME, Category.CATEGORY.IS_DELETED)
 				.values(name, isDeleted)
-				.returningResult(Category.CATEGORY.CATEGORY_ID, Category.CATEGORY.NAME, Category.CATEGORY.IS_DELETED)
-				);		
+				.returningResult(Category.CATEGORY.CATEGORY_ID, Category.CATEGORY.NAME, 
+						Category.CATEGORY.IS_DELETED)
+			);		
+		
 		retVal.onComplete(ar -> {
 			if (ar.succeeded()) {
 				JsonObject result = new JsonObject().put("name", name).put("is_deleted", isDeleted);
@@ -110,8 +111,10 @@ public class CategoryJooqQueries {
 			.where(Category.CATEGORY.CATEGORY_ID.eq(Long.valueOf(id)))
 		);
 		if (retVal.succeeded()) {
+			LOGGER.info("retVal SUCCEEDED! reVal = " + retVal.result());
 			promise.complete();
 		} else {
+			LOGGER.error("Error, something is wrong! retVal." + retVal.cause());
 			promise.fail(retVal.cause());
 		}
 		return promise.future();

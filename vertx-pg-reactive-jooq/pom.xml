@@ -5,7 +5,7 @@
 	<groupId>vertx-pg-reactive</groupId>
 	<artifactId>vertx-pg-reactive-jooq</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<description>VertX implementation using Reactive PostgresSQL Client with plain (handwritten) queries</description>
+	<description>VertX implementation using Reactive PostgresSQL Client with vertx-jOOQ queries</description>
 
 	<properties>
 		<vertx.version>3.9.0</vertx.version>
@@ -54,13 +54,17 @@
 			<artifactId>vertx-pg-client</artifactId>
 		</dependency>
 		
-		<!-- added because JOOQ uses JDBC to connect to Postgres DB -->
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-jdbc-client</artifactId>
 		</dependency>
+		
+		<dependency>
+			<groupId>org.javatuples</groupId>
+			<artifactId>javatuples</artifactId>
+			<version>1.2</version>
+		</dependency>
 
-		<!-- added for jooq reactive dependencies::START -->
 		<dependency>
 			<groupId>org.jooq</groupId>
 			<artifactId>jooq</artifactId>
@@ -69,9 +73,8 @@
 		<dependency>
 			<groupId>io.github.jklingsporn</groupId>
 			<artifactId>vertx-jooq-classic-reactive</artifactId>
-			<version>${vertx-jooq-classic-reactive.version}</version> <!-- CHANGED from 5.0.1 to 5.1.1 -->
+			<version>${vertx-jooq-classic-reactive.version}</version>
 		</dependency>
-		<!-- added for jooq reactive dependencies::END -->
 	</dependencies>
 
 	<build>
@@ -169,8 +172,8 @@
 				</configuration>
 			</plugin>
 
-			<!-- ================================================================= -->
-			<!-- NEWLY added plugin for "VertX-JOOQ-Classic-Reactive"::START -->
+			<!-- ================================================ -->
+			<!-- Plug-in for "VertX-JOOQ-Classic-Reactive"::START -->
 			<plugin>
 				<!-- Specify the maven code generator plugin -->
 				<groupId>org.jooq</groupId>
@@ -195,12 +198,11 @@
 					<dependency>
 						<groupId>io.github.jklingsporn</groupId>
 						<artifactId>vertx-jooq-generate</artifactId>
-						<version>${vertx-jooq-classic-reactive.version}</version> <!-- CHANGED from 5.0.1 to 5.1.1 -->
+						<version>${vertx-jooq-classic-reactive.version}</version>
 					</dependency>
 				</dependencies>
 
-				<!-- Specify the plugin configuration. The configuration format is the 
-					same as for the standalone code generator -->
+				<!-- Specify the plugin configuration. The configuration format is the same as for the standalone code generator -->
 				<configuration>
 					<!-- JDBC connection parameters -->
 					<jdbc>
@@ -213,8 +215,6 @@
 					<!-- Generator parameters -->
 					<generator>
 						<name>io.github.jklingsporn.vertx.jooq.generate.classic.ClassicReactiveVertxGenerator</name>
-						<!-- use 'io.github.jklingsporn.vertx.jooq.generate.classic.ClassicReactiveGuiceVertxGenerator' 
-							to enable Guice DI -->
 						<database>
 							<name>org.jooq.meta.postgres.PostgresDatabase</name>
 							<includes>.*</includes>
@@ -262,8 +262,8 @@
 					</generator>
 				</configuration>
 			</plugin>
-			<!-- NEWLY added plugin for "VertX-JOOQ-Classic-Reactive"::END -->
-			<!-- =============================================================== -->
+			<!-- Plug-in for "VertX-JOOQ-Classic-Reactive"::END -->
+			<!-- ============================================== -->
 
 		</plugins>
 	</build>
