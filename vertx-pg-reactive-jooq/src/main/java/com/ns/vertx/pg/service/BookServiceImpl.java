@@ -1,5 +1,6 @@
 package com.ns.vertx.pg.service;
 
+import static com.ns.vertx.pg.jooq.tables.Author.AUTHOR;
 import static com.ns.vertx.pg.jooq.tables.Book.BOOK;
 import static com.ns.vertx.pg.jooq.tables.AuthorBook.AUTHOR_BOOK;
 import static com.ns.vertx.pg.jooq.tables.CategoryBook.CATEGORY_BOOK;
@@ -164,29 +165,27 @@ public class BookServiceImpl {
 						.boxed().collect(Collectors.toList());				
 								
 				List<AuthorBookRecord> authorBookRecordList = new ArrayList<AuthorBookRecord>();
-				for(Long autId: authorIds) {
-					authorBookRecordList.add(new AuthorBookRecord(autId, bookId));
-				}			
-				LOGGER.info("authorId-bookId:");
-				authorBookRecordList.stream().forEach(ab -> 
-					System.out.println(ab.getAuthorId() + "-" + ab.getBookId()));
+				for(Long authorId: authorIds) {					
+					AuthorBookRecord authorBookRecord = new AuthorBookRecord(authorId, bookId);					
+					LOGGER.info("authorBookRecord.key().toString() = \n" + authorBookRecord.key().toString());
+					authorBookRecordList.add(authorBookRecord); 
+				}							
 				
-//				Future<Integer> insertBAFuture = queryExecutor.execute(dsl -> dsl
-//					.insertInto(AUTHOR_BOOK, AUTHOR_BOOK.AUTHOR_ID, AUTHOR_BOOK.BOOK_ID)
-//					.values(authorBookRecordList)						
-//				);				
+				// NOTE: this is GOOD, but inserting book on  
+				Future<Integer> insertBAFuture = queryExecutor.execute(dsl -> dsl
+					.insertInto(AUTHOR_BOOK, AUTHOR_BOOK.AUTHOR_ID, AUTHOR_BOOK.BOOK_ID)
+					.values(authorBookRecordList) 					
+				); 				
 				
-				
-				Future<Integer> insertBAFuture = queryExecutor.execute(dsl -> {
-//					DSLContext newDSL = dsl;
-					return dsl
+				/*
+				Future<Integer> insertBAFuture = queryExecutor.execute(dsl -> dsl					
 						.insertInto(AUTHOR_BOOK)
 						.columns(AUTHOR_BOOK.BOOK_ID, AUTHOR_BOOK.AUTHOR_ID)
 						.values(authorBookRecordList.stream()
 								// execute(Insert/Update/Delete) CAN NOT be EXECUTED in Vert.X-jOOQ!
 							.map(ba -> dsl.executeInsert(new AuthorBookRecord(ba.getAuthorId(), ba.getBookId())))
-							.collect(Collectors.toList()));					
-				});
+							.collect(Collectors.toList()))					
+				);*/
 				
 				insertBAFuture.onComplete(insertedBA -> {
 					if (insertedBA.succeeded()) {
