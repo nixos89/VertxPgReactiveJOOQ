@@ -1,6 +1,5 @@
 package com.ns.vertx.pg.service;
 
-import static com.ns.vertx.pg.jooq.tables.Author.AUTHOR;
 import static com.ns.vertx.pg.jooq.tables.Book.BOOK;
 import static com.ns.vertx.pg.jooq.tables.AuthorBook.AUTHOR_BOOK;
 import static com.ns.vertx.pg.jooq.tables.CategoryBook.CATEGORY_BOOK;
@@ -13,26 +12,30 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.jooq.Configuration;
+import org.jooq.InsertValuesStepN;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.jooq.DSLContext;
-import org.jooq.Query;
 
 import com.ns.vertx.pg.DBQueries;
 import com.ns.vertx.pg.jooq.tables.daos.AuthorBookDao;
 import com.ns.vertx.pg.jooq.tables.daos.BookDao;
 import com.ns.vertx.pg.jooq.tables.daos.CategoryBookDao;
+import com.ns.vertx.pg.jooq.tables.mappers.RowMappers;
 import com.ns.vertx.pg.jooq.tables.pojos.AuthorBook;
 import com.ns.vertx.pg.jooq.tables.pojos.Book;
 import com.ns.vertx.pg.jooq.tables.pojos.CategoryBook;
 import com.ns.vertx.pg.jooq.tables.records.AuthorBookRecord;
+import com.ns.vertx.pg.jooq.tables.records.CategoryBookRecord;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
+import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicQueryExecutor;
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowIterator;
 import io.vertx.sqlclient.RowSet;
@@ -134,79 +137,69 @@ public class BookServiceImpl {
 		return finalRes.future();
 	}
 	
+	// **************************************************************************************************************************	
 	
-	public static Future<Void> createBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
-			JsonObject bookJO) {
+	public static Future<Void> createBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, 
+			JsonObject bookJO, Configuration configuration, PgPool pgClient) {
 		Promise<Void> promise = Promise.promise();			
 		Book bookPojo = new Book(bookJO); // this is OVERHEAD ("bookJO" can b used to extract book FIELDS info)
+//		ReactiveClassicQueryExecutor queryExecutorAuthorBookNG = new ReactiveClassicQueryExecutor(configuration, pgClient, RowMappers.getAuthorBookMapper());		
+//		queryExecutor.beginTransaction();
 		
-		queryExecutor.beginTransaction();				
-		/* FIXME: might want ALSO to compose() AuthorBook and CategoryBook insertions instead of returning them 
-		 * to Future<T> object */
-		Future<RowSet<Row>> insertedBookFuture = queryExecutor.executeAny(dsl -> dsl
+		Future<Integer> transactionFuture = queryExecutor.transaction(qe -> qe
+			.executeAny(dsl -> dsl
 				.insertInto(BOOK)
 				.columns(BOOK.TITLE, BOOK.AMOUNT, BOOK.PRICE, BOOK.IS_DELETED)
 				.values(bookPojo.getTitle(), bookPojo.getAmount(), bookPojo.getPrice(), bookPojo.getIsDeleted())
-				.returningResult(BOOK.BOOK_ID, BOOK.TITLE, BOOK.AMOUNT, BOOK.PRICE, BOOK.IS_DELETED)
-		); 		
-
-		insertedBookFuture.onComplete(insertedBook -> {
-			if (insertedBook.succeeded()) {
-				JsonObject resultJO =  extractBookFromRS(insertedBook.result());
+				.returningResult(BOOK.BOOK_ID, BOOK.TITLE, BOOK.AMOUNT, BOOK.PRICE, BOOK.IS_DELETED))
+			.compose(insertedBook -> { 	// insertedBook is of type: RowSet<Row>			
+				JsonObject resultJO =  extractBookFromRS(insertedBook);
 				final Long bookId = resultJO.getLong("book_id");
-				LOGGER.info("saved book: " + resultJO.encodePrettily());
+				LOGGER.info("saved book:\n" + resultJO.encodePrettily());
 				
 				List<Long> authorIds = bookJO.getJsonArray("author_ids").stream()
 						.mapToLong(a -> Long.valueOf(String.valueOf(a)))
 						.boxed().collect(Collectors.toList());
 				
-				List<Long> categoryIds = bookJO.getJsonArray("category_ids").stream()
-						.mapToLong(c -> Long.valueOf(String.valueOf(c)))
-						.boxed().collect(Collectors.toList());				
-								
-				List<AuthorBookRecord> authorBookRecordList = new ArrayList<AuthorBookRecord>();
+				List<AuthorBookRecord> authorBookRecordList = new ArrayList<AuthorBookRecord>();				
 				for(Long authorId: authorIds) {					
 					AuthorBookRecord authorBookRecord = new AuthorBookRecord(authorId, bookId);					
 					LOGGER.info("authorBookRecord.key().toString() = \n" + authorBookRecord.key().toString());
 					authorBookRecordList.add(authorBookRecord); 
 				}							
+							
+				List<Long> categoryIds = bookJO.getJsonArray("category_ids").stream()
+						.mapToLong(c -> Long.valueOf(String.valueOf(c)))
+						.boxed().collect(Collectors.toList());			
+				List<CategoryBookRecord> categoryBookRecordList = new ArrayList<CategoryBookRecord>();
+				for(Long categoryId: categoryIds) {					
+					CategoryBookRecord categoryBookRecord = new CategoryBookRecord(categoryId, bookId);					
+					LOGGER.info("categoryBookRecord.key().toString() = \n" + categoryBookRecord.key().toString());
+					categoryBookRecordList.add(categoryBookRecord); 
+				}							
 				
-				// NOTE: this is GOOD, but inserting book on  
-				Future<Integer> insertBAFuture = queryExecutor.execute(dsl -> dsl
-					.insertInto(AUTHOR_BOOK, AUTHOR_BOOK.AUTHOR_ID, AUTHOR_BOOK.BOOK_ID)
-					.values(authorBookRecordList) 					
-				); 				
-				
-				/*
-				Future<Integer> insertBAFuture = queryExecutor.execute(dsl -> dsl					
-						.insertInto(AUTHOR_BOOK)
-						.columns(AUTHOR_BOOK.BOOK_ID, AUTHOR_BOOK.AUTHOR_ID)
-						.values(authorBookRecordList.stream()
-								// execute(Insert/Update/Delete) CAN NOT be EXECUTED in Vert.X-jOOQ!
-							.map(ba -> dsl.executeInsert(new AuthorBookRecord(ba.getAuthorId(), ba.getBookId())))
-							.collect(Collectors.toList()))					
-				);*/
-				
-				insertBAFuture.onComplete(insertedBA -> {
-					if (insertedBA.succeeded()) {
-						LOGGER.info("Book and AUTHORS have been successfuly inserted!");
-						promise.complete();
-					} else {
-						LOGGER.error("Error, book and AUTHORS have not been inserted! Cause: " + insertedBA.cause());
-						promise.handle(Future.failedFuture(insertedBA.cause()));
-					}
-				});
-				
-				LOGGER.info("resultJO: " + resultJO.encodePrettily());				
-				// TODO: commit TRANSACTION here
+				return queryExecutor.execute(dsl -> dsl
+					.insertInto(AUTHOR_BOOK)
+					.columns(AUTHOR_BOOK.AUTHOR_ID, AUTHOR_BOOK.BOOK_ID)
+					.values(authorBookRecordList)
+				).compose(res -> queryExecutor.execute(dsl -> dsl
+					.insertInto(CATEGORY_BOOK)
+					.columns(CATEGORY_BOOK.CATEGORY_ID, CATEGORY_BOOK.BOOK_ID)
+					.values(categoryBookRecordList)
+				)); 				
+		}));
+		transactionFuture.onComplete(handler -> {
+			if (handler.succeeded()) {
+				LOGGER.info("ALL is good!");
 				promise.complete();
 			} else {
-				LOGGER.error("Error, book has NOT been inserted! Cause: " + insertedBook.cause());
-				queryExecutor.rollback();
-				promise.handle(Future.failedFuture(insertedBook.cause()));
+				LOGGER.info("Error, somethin' WENT WRRRRRONG!!! handler.result() = " + handler.result() + "!\nCause: " + handler.cause());
+//					Future<Void> rollbackFuture = queryExecutor.rollback();
+//					rollbackFuture.onComplete(rollbacked -> LOGGER.info("Success, transactions has rollbacked!"));
+//					rollbackFuture.onFailure(failedRollback -> LOGGER.info("Error, transaction has FAILED to rollback! Cause: " + failedRollback.getCause()));
+				promise.handle(Future.failedFuture(handler.cause()));
 			}
 		});
-			
 		
 		return promise.future();
 	}
@@ -346,10 +339,7 @@ public class BookServiceImpl {
 	public static Future<Void> deleteBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long id) {
 		Promise<Void> promise = Promise.promise();
 		Future<Integer> deleteBookFuture =  queryExecutor.transaction(qe -> {
-			return qe.execute(dsl -> dsl
-					.delete(BOOK)
-					.where(BOOK.BOOK_ID.eq(Long.valueOf(id)))
-				);
+			return qe.execute(dsl -> dsl.delete(BOOK).where(BOOK.BOOK_ID.eq(Long.valueOf(id))));
 		});
 			
 		deleteBookFuture.onComplete(ar -> {
@@ -358,6 +348,10 @@ public class BookServiceImpl {
 				promise.handle(Future.succeededFuture());
 			} else {
 				LOGGER.error("Error, deletion failed for Book id = " + id);
+				Future<Void> rollbackFuture = queryExecutor.rollback();
+				rollbackFuture.onSuccess(handler -> LOGGER.info("Transaction successfully rolledback!"));
+				rollbackFuture.onFailure(handler -> LOGGER.info("Error, transcation did NOT rollback! Cause: " + handler.getCause()));
+				
 				promise.handle(Future.failedFuture(new NoSuchElementException("No book with id = " + id)));
 			}
 		});

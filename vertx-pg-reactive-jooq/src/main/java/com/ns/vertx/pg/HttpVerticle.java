@@ -5,6 +5,7 @@ import static com.ns.vertx.pg.DBQueries.CREATE_CATEGORY_TABLE_SQL;
 
 import org.jooq.Configuration;
 import org.jooq.SQLDialect;
+import org.jooq.UpdatableRecord;
 import org.jooq.impl.DefaultConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +13,11 @@ import org.slf4j.LoggerFactory;
 import com.ns.vertx.pg.jooq.tables.daos.AuthorBookDao;
 import com.ns.vertx.pg.jooq.tables.daos.BookDao;
 import com.ns.vertx.pg.jooq.tables.daos.CategoryBookDao;
+import com.ns.vertx.pg.jooq.tables.mappers.RowMappers;
 import com.ns.vertx.pg.jooq.tables.pojos.Category;
+import com.ns.vertx.pg.jooq.tables.records.AuthorBookRecord;
+import com.ns.vertx.pg.jooq.tables.records.AuthorRecord;
+import com.ns.vertx.pg.jooq.tables.records.BookRecord;
 import com.ns.vertx.pg.service.BookServiceImpl;
 import com.ns.vertx.pg.service.CategoryServiceImpl;
 
@@ -40,7 +45,6 @@ public class HttpVerticle extends AbstractVerticle {
 
 	private PgPool pgClient;
 	private ReactiveClassicGenericQueryExecutor queryExecutor;
-	private ReactiveClassicQueryExecutor queryExecutorNG;
 	private Configuration configuration;
 	
 	
@@ -218,10 +222,10 @@ public class HttpVerticle extends AbstractVerticle {
 	
 	private void createBookHandler(RoutingContext rc) {
 		JsonObject bookJO = rc.getBodyAsJson();		
-		LOGGER.info("In 'createBookHandler(..)' bookJO = " + bookJO.encodePrettily());		
+		LOGGER.info("In 'createBookHandler(..)' bookJO =\n" + bookJO.encodePrettily());		
 		/* BookJooqQueries.createBookJooq(queryExecutor, bookDAO, authorBookDAO, categoryBookDAO, bookJO)
 			.onComplete(created(rc)); */		
-		BookServiceImpl.createBookJooq(queryExecutor, bookJO).onComplete(created(rc));
+		BookServiceImpl.createBookJooq(queryExecutor, bookJO, configuration, pgClient).onComplete(created(rc));
 	}
 
 	
