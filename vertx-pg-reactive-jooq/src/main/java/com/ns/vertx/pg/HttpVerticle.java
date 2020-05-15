@@ -5,7 +5,6 @@ import static com.ns.vertx.pg.DBQueries.CREATE_CATEGORY_TABLE_SQL;
 
 import org.jooq.Configuration;
 import org.jooq.SQLDialect;
-import org.jooq.UpdatableRecord;
 import org.jooq.impl.DefaultConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,16 +12,12 @@ import org.slf4j.LoggerFactory;
 import com.ns.vertx.pg.jooq.tables.daos.AuthorBookDao;
 import com.ns.vertx.pg.jooq.tables.daos.BookDao;
 import com.ns.vertx.pg.jooq.tables.daos.CategoryBookDao;
-import com.ns.vertx.pg.jooq.tables.mappers.RowMappers;
 import com.ns.vertx.pg.jooq.tables.pojos.Category;
-import com.ns.vertx.pg.jooq.tables.records.AuthorBookRecord;
-import com.ns.vertx.pg.jooq.tables.records.AuthorRecord;
-import com.ns.vertx.pg.jooq.tables.records.BookRecord;
+import com.ns.vertx.pg.service.AuthorServiceImpl;
 import com.ns.vertx.pg.service.BookServiceImpl;
 import com.ns.vertx.pg.service.CategoryServiceImpl;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
-import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicQueryExecutor;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -60,6 +55,13 @@ public class HttpVerticle extends AbstractVerticle {
 		Router routerREST = Router.router(vertx);
 		routerREST.post().handler(BodyHandler.create());
 		routerREST.put().handler(BodyHandler.create());
+		
+		// Authors REST API
+		routerREST.get("/authors").handler(this::getAllAuthorsHandler);
+//		routerREST.get("/authors/:id").handler(this::getAuthorByIdHandler);				
+//		routerREST.post("/authors").handler(this::createAuthorHandler);
+//		routerREST.put("/authors/:id").handler(this::updateAuthorHandler);
+//		routerREST.delete("/authors/:id").handler(this::deleteAuthorHandler);		
 		
 		// Categories REST API		
 		routerREST.get("/categories").handler(this::getAllCategoriesHandler);
@@ -187,6 +189,11 @@ public class HttpVerticle extends AbstractVerticle {
 		});
 		return promise;
 	}
+	
+	private void getAllAuthorsHandler(RoutingContext rc) {
+		AuthorServiceImpl.getAllAuthorsJooq(queryExecutor).onComplete((ok(rc)));				
+	}
+	
 
 	private void getAllCategoriesHandler(RoutingContext rc) {
 		CategoryServiceImpl.getAllCategoriesJooq(queryExecutor).onComplete((ok(rc)));				

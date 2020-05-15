@@ -1,6 +1,8 @@
 package com.ns.vertx.pg.service;
 
 import static com.ns.vertx.pg.jooq.tables.Book.BOOK;
+import static com.ns.vertx.pg.jooq.tables.Author.AUTHOR;
+import static com.ns.vertx.pg.jooq.tables.Category.CATEGORY;
 import static com.ns.vertx.pg.jooq.tables.AuthorBook.AUTHOR_BOOK;
 import static com.ns.vertx.pg.jooq.tables.CategoryBook.CATEGORY_BOOK;
 
@@ -65,7 +67,7 @@ public class BookServiceImpl {
 		return new JsonObject().put("books", booksJA);
 	}	
 	
-	
+	// FIXME: dfd
 	private static JsonObject extractBookFromRS(RowSet<Row> rowSetBook){
 		LOGGER.info("rowSetBook.columnsNames(): " + rowSetBook.columnsNames());
 		
@@ -93,7 +95,7 @@ public class BookServiceImpl {
 			if (handler.succeeded()) {								
 				QueryResult booksQR = handler.result();				
 				JsonObject booksJsonObject = extractBooksFromQR(booksQR);
-				LOGGER.info("bookJsonObject.encodePrettily(): " + booksJsonObject.encodePrettily());
+				//LOGGER.info("bookJsonObject.encodePrettily(): " + booksJsonObject.encodePrettily());
 				finalRes.complete(booksJsonObject);
 	    	} else {
 	    		LOGGER.error("Error, something failed in retrivening ALL books! Cause: " 
@@ -106,28 +108,53 @@ public class BookServiceImpl {
 		return finalRes.future();
 	}
 	
+	
+	public static Future<JsonObject> getAllBooksByAuthorIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long authorId) {
+		Promise<JsonObject> finalRes = Promise.promise();					
+//		Future<List<Row>> bookFuture = queryExecutor.transaction(qe -> {			
+//			return qe.findManyRow(dsl -> dsl
+//				.select(BOOK.BOOK_ID, BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED, AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME, CATEGORY.CATEGORY_ID, CATEGORY.NAME, CATEGORY.IS_DELETED));
+//		});				
+//		
+//	    bookFuture.onComplete(handler -> {
+//			if (handler.succeeded()) {								
+//				List<Row> booksLR = handler.result();				
+//				JsonObject booksJsonObject = new JsonObject();// = extractBooksFromQR(booksLR);
+//				//LOGGER.info("bookJsonObject.encodePrettily(): " + booksJsonObject.encodePrettily());
+//				finalRes.complete(booksJsonObject);
+//	    	} else {
+//	    		LOGGER.error("Error, something failed in retrivening ALL books! Cause: " 
+//	    				+ handler.cause().getMessage());
+//	    		queryExecutor.rollback();
+//	    		finalRes.fail(handler.cause());
+//	    	}
+//	    }); 
 		
-	public static Future<JsonObject> getBookByIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long book_id) {
+		return finalRes.future();
+	}
+	
+		
+	public static Future<JsonObject> getBookByIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long bookId) {
 		Promise<JsonObject> finalRes = Promise.promise();
 
 		Future<QueryResult> bookFuture = queryExecutor.transaction(qe -> {
 			return qe.query(dsl -> dsl
-			    .resultQuery(DBQueries.GET_BOOK_BY_BOOK_ID, Long.valueOf(book_id)));
+			    .resultQuery(DBQueries.GET_BOOK_BY_BOOK_ID, Long.valueOf(bookId)));
 		});								    
 	    bookFuture.onComplete(handler -> {
 			if (handler.succeeded()) {
-				LOGGER.info("Success, query has passed for book ID = " + book_id);												
+				//LOGGER.info("Success, query has passed for book ID = " + book_id);												
 				QueryResult booksQR = handler.result();				
 				if(booksQR != null) {
 					JsonObject bookJsonObject = fillBook(booksQR);				
 					finalRes.complete(bookJsonObject);
 				} else {				
-					JsonObject resp = new JsonObject().put("message", "Book with id " + book_id + " does NOT exist in DB!");
+					JsonObject resp = new JsonObject().put("message", "Book with id " + bookId + " does NOT exist in DB!");
 					finalRes.complete(resp);
 				}
 				
 	    	} else {
-	    		LOGGER.error("Error, something failed in retrivening query by book_id = " + book_id +
+	    		LOGGER.error("Error, something failed in retrivening query by book_id = " + bookId +
 	    				" ! Cause: " + handler.cause());
 	    		queryExecutor.rollback();
 	    		finalRes.fail(handler.cause());
