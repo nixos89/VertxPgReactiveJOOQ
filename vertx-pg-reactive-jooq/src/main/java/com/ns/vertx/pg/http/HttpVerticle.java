@@ -1,7 +1,7 @@
-package com.ns.vertx.pg;
+package com.ns.vertx.pg.http;
 
-import static com.ns.vertx.pg.ActionHelper.*;
-import static com.ns.vertx.pg.DBQueries.CREATE_CATEGORY_TABLE_SQL;
+import static com.ns.vertx.pg.http.ActionHelper.*;
+import static com.ns.vertx.pg.service.DBQueries.CREATE_CATEGORY_TABLE_SQL;
 
 import org.jooq.Configuration;
 import org.jooq.SQLDialect;
@@ -12,10 +12,12 @@ import org.slf4j.LoggerFactory;
 import com.ns.vertx.pg.jooq.tables.daos.AuthorBookDao;
 import com.ns.vertx.pg.jooq.tables.daos.BookDao;
 import com.ns.vertx.pg.jooq.tables.daos.CategoryBookDao;
+import com.ns.vertx.pg.jooq.tables.pojos.Author;
 import com.ns.vertx.pg.jooq.tables.pojos.Category;
 import com.ns.vertx.pg.service.AuthorServiceImpl;
 import com.ns.vertx.pg.service.BookServiceImpl;
 import com.ns.vertx.pg.service.CategoryServiceImpl;
+import com.ns.vertx.pg.service.OrderServiceImpl;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.vertx.core.AbstractVerticle;
@@ -32,23 +34,18 @@ import io.vertx.sqlclient.PreparedStatement;
 import io.vertx.sqlclient.SqlConnection;
 
 
-// MainVerticle is ALSO HttpVerticle in this scenario
 public class HttpVerticle extends AbstractVerticle {
 
 	private final static Logger LOGGER = LoggerFactory.getLogger(HttpVerticle.class);
 	private static int LISTEN_PORT = 8080;
 
 	private PgPool pgClient;
-	private ReactiveClassicGenericQueryExecutor queryExecutor;
 	private Configuration configuration;
-	
-	
-	// FIXME: remove ALL DAOs
+	private ReactiveClassicGenericQueryExecutor queryExecutor;	
+		
 	private BookDao bookDAO;
 	private AuthorBookDao authorBookDAO;
 	private CategoryBookDao categoryBookDAO;
-//	private OrdersDao ordersDAO;
-//	private OrderItemDao orderItemDAO;
 
 	@Override
 	public void start(Promise<Void> startPromise) throws Exception {
@@ -58,10 +55,10 @@ public class HttpVerticle extends AbstractVerticle {
 		
 		// Authors REST API
 		routerREST.get("/authors").handler(this::getAllAuthorsHandler);
-//		routerREST.get("/authors/:id").handler(this::getAuthorByIdHandler);				
-//		routerREST.post("/authors").handler(this::createAuthorHandler);
-//		routerREST.put("/authors/:id").handler(this::updateAuthorHandler);
-//		routerREST.delete("/authors/:id").handler(this::deleteAuthorHandler);		
+		routerREST.get("/authors/:id").handler(this::getAuthorByIdHandler);				
+		routerREST.post("/authors").handler(this::createAuthorHandler);
+		routerREST.put("/authors/:id").handler(this::updateAuthorHandler);
+		routerREST.delete("/authors/:id").handler(this::deleteAuthorHandler);		
 		
 		// Categories REST API		
 		routerREST.get("/categories").handler(this::getAllCategoriesHandler);
@@ -72,15 +69,16 @@ public class HttpVerticle extends AbstractVerticle {
 
 		// Books REST API		
 		routerREST.get("/books").handler(this::getAllBooksHandlerJooq);
-		routerREST.get("/books/:id").handler(this::getBookByIdHandler);		
+		routerREST.get("/authors/:id/books").handler(this::getAllBooksByAuthorIdHandler);
+		routerREST.get("/books/:id").handler(this::getBookByIdHandler);				
 		routerREST.post("/books").handler(this::createBookHandler);
 		routerREST.put("/books/:id").handler(this::updateBookHandler);
 		routerREST.delete("/books/:id").handler(this::deleteBookHandler);
 		
 		// Orders REST API
 		// TODO: create HANDLER methods 
-//		routerREST.get("/orders").handler(this::getAllOrdersHandler);
-//		routerREST.post("/orders").handler(this::createOrderHandler);
+		routerREST.get("/orders").handler(this::getAllOrdersHandler);
+		routerREST.post("/orders").handler(this::createOrderHandler);
 		
 		Router routerAPI = Router.router(vertx);
 		routerAPI.mountSubRouter("/api", routerREST);
@@ -108,10 +106,8 @@ public class HttpVerticle extends AbstractVerticle {
 		bookDAO = new BookDao(configuration, pgClient);
 		authorBookDAO = new AuthorBookDao(configuration, pgClient);
 		categoryBookDAO = new CategoryBookDao(configuration, pgClient);
-//		ordersDAO = new OrdersDao(configuration, pgClient);
-//		orderItemDAO = new OrderItemDao(configuration, pgClient);
 
-		/* TODO: Check is DB conn CLOSED? Because of this 'DSLContext doesn't close the connection.' @:
+		/* NOT: D connection is AUTOMATICALY CLOSED! More info at:
 		 * https://www.jooq.org/doc/3.11/manual/getting-started/tutorials/jooq-in-7-steps/jooq-in-7-steps-step5/ */
 		queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
 		// ================================================================================================
@@ -199,6 +195,11 @@ public class HttpVerticle extends AbstractVerticle {
 		CategoryServiceImpl.getAllCategoriesJooq(queryExecutor).onComplete((ok(rc)));				
 	}
 	
+	private void getAuthorByIdHandler(RoutingContext rc) {
+		long id = Long.valueOf(rc.request().getParam("id"));
+		AuthorServiceImpl.getAuthorByIdJooq(queryExecutor, id).onComplete(ok(rc));
+	}
+	
 	// FIXME: fix handling of NON-EXISTING 'category_id' which has been sent in HTTP GET request!!!
 	private void getCategoryByIdHandler(RoutingContext rc) {
 		long id = Long.valueOf(rc.request().getParam("id"));
@@ -211,13 +212,23 @@ public class HttpVerticle extends AbstractVerticle {
 		BookServiceImpl.getAllBooksJooq(queryExecutor).onComplete(ok(rc));
 	}
 	
+	private void getAllBooksByAuthorIdHandler(RoutingContext rc) {
+		long authorId = Long.valueOf(rc.request().getParam("id"));
+		BookServiceImpl.getAllBooksByAuthorIdJooqMix(queryExecutor, authorId).onComplete(ok(rc));
+	}
+	
 
 	private void getBookByIdHandler(RoutingContext rc) {
 		long id = Long.valueOf(rc.request().getParam("id"));
-//		BookJooqQueries.getBookByIdJooq(queryExecutor, id).onComplete((ok(rc)));
 		BookServiceImpl.getBookByIdJooq(queryExecutor, id).onComplete((ok(rc)));
 	}
 	
+	private void createAuthorHandler(RoutingContext rc) {
+		JsonObject json = rc.getBodyAsJson();
+		AuthorServiceImpl
+			.createAuthorJooq(queryExecutor, json.getString("first_name"), json.getString("last_name"))
+			.onComplete(created(rc));
+	}
 	
 	private void createCategoryHandler(RoutingContext rc) {
 		JsonObject json = rc.getBodyAsJson();
@@ -232,9 +243,18 @@ public class HttpVerticle extends AbstractVerticle {
 		LOGGER.info("In 'createBookHandler(..)' bookJO =\n" + bookJO.encodePrettily());		
 		/* BookJooqQueries.createBookJooq(queryExecutor, bookDAO, authorBookDAO, categoryBookDAO, bookJO)
 			.onComplete(created(rc)); */		
-		BookServiceImpl.createBookJooq(queryExecutor, bookJO, configuration, pgClient).onComplete(created(rc));
+		BookServiceImpl.createBookJooq(queryExecutor, bookJO, configuration, pgClient, authorBookDAO, categoryBookDAO)
+					   .onComplete(created(rc));
 	}
 
+	private void updateAuthorHandler(RoutingContext rc) {
+		long id = (long) Integer.valueOf(rc.request().getParam("id"));
+		Author authorPojo = new Author(rc.getBodyAsJson());
+		authorPojo.setAuthorId(id);
+		LOGGER.info("(in updateAuthorHandler) authorPojo.toString(): " + authorPojo.toString());
+		AuthorServiceImpl.updateAuthorJooq(queryExecutor, authorPojo, id).onComplete(noContent(rc));
+	}	
+	
 	
 	private void updateCategoryHandler(RoutingContext rc) {
 		long id = (long) Integer.valueOf(rc.request().getParam("id"));
@@ -248,10 +268,13 @@ public class HttpVerticle extends AbstractVerticle {
 		long id = (long) Integer.valueOf(rc.request().getParam("id"));
 		JsonObject bookJO = rc.getBodyAsJson();
 		bookJO.put("book_id", id);
-		BookJooqQueries.updateBookJooq(queryExecutor, bookJO, bookDAO, authorBookDAO, categoryBookDAO, id)
-					   .onComplete( (ok(rc)) );
 		BookServiceImpl.updateBookJooq(queryExecutor, bookJO, bookDAO, authorBookDAO, categoryBookDAO, id)
 		   .onComplete( (ok(rc)) );
+	}
+	
+	private void deleteAuthorHandler(RoutingContext rc) {
+		long id = Long.valueOf(rc.request().getParam("id"));
+		AuthorServiceImpl.deleteAuthorJooq(queryExecutor, id).onComplete(noContent(rc));
 	}
 	
 	private void deleteCategoryHandler(RoutingContext rc) {
@@ -261,17 +284,18 @@ public class HttpVerticle extends AbstractVerticle {
 	
 	private void deleteBookHandler(RoutingContext rc) {
 		long id = Long.valueOf(rc.request().getParam("id"));
-//		BookJooqQueries.deleteBookJooq(queryExecutor, id).onComplete(noContent(rc));
 		BookServiceImpl.deleteBookJooq(queryExecutor, id).onComplete(noContent(rc));
 	}
 	
-//	private void getAllOrdersHandler(RoutingContext rc) {
-//		OrdersJooqQueries.getAllOrdersJooq(queryExecutor).onComplete(ok(rc));
-//	}
+	private void getAllOrdersHandler(RoutingContext rc) {
+		OrderServiceImpl.getAllOrdersJooq(queryExecutor).onComplete(ok(rc));
+	}
 
-//	private void createOrderHandler(RoutingContext rc) {
-//		JsonObject orderJO = rc.getBodyAsJson();
-//		OrdersJooqQueries.createOrdersJooq()
-//	}
+	
+	private void createOrderHandler(RoutingContext rc) {
+		JsonObject orderJO = rc.getBodyAsJson();
+		String username = rc.request().getParam("username");
+		OrderServiceImpl.createOrderJooq(queryExecutor, orderJO, username).onComplete(ok(rc));
+	}
 
 }

@@ -1,4 +1,4 @@
-package com.ns.vertx.pg;
+package com.ns.vertx.pg.examples;
 
 import java.util.Iterator;
 import java.util.List;

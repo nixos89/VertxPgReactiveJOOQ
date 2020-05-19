@@ -1,4 +1,4 @@
-package com.ns.vertx.pg;
+package com.ns.vertx.pg.http;
 
 import java.util.NoSuchElementException;
 

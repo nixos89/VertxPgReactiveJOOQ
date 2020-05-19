@@ -36,7 +36,6 @@ public class CategoryServiceImpl {
 		while(ir.hasNext()) {			
 			Row row = ir.next();
 			JsonObject category = fillCategory(row);
-			LOGGER.info("category:\n" + category.encodePrettily());
 			categoriesArr.add(category);
 		}
 		JsonObject categoriesFinal = new JsonObject();

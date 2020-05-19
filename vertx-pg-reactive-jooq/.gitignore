@@ -7,7 +7,4 @@ src/main/java/com/ns/vertx/pg/examples
 /.attach_pid**
 /.dbeaver
 /.sts4**
-../libs/**
-../libs/*.java
-../libs/*.java
-../lib/*
+/lib/*

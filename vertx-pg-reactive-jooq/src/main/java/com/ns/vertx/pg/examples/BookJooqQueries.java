@@ -1,4 +1,4 @@
-package com.ns.vertx.pg;
+package com.ns.vertx.pg.examples;
 
 
 import static com.ns.vertx.pg.jooq.tables.AuthorBook.AUTHOR_BOOK;
@@ -8,9 +8,11 @@ import static com.ns.vertx.pg.jooq.tables.CategoryBook.CATEGORY_BOOK;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.jooq.DSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +22,7 @@ import com.ns.vertx.pg.jooq.tables.daos.CategoryBookDao;
 import com.ns.vertx.pg.jooq.tables.pojos.AuthorBook;
 import com.ns.vertx.pg.jooq.tables.pojos.Book;
 import com.ns.vertx.pg.jooq.tables.pojos.CategoryBook;
+import com.ns.vertx.pg.service.DBQueries;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
@@ -149,7 +152,7 @@ public class BookJooqQueries {
 	
 	// ***************************************************************************************************************
 	
-	static Future<JsonObject> updateBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, JsonObject bookJO, 
+	public static Future<JsonObject> updateBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, JsonObject bookJO, 
 			BookDao bookDAO, AuthorBookDao authorBookDAO, CategoryBookDao categoryBookDAO, long bookId) {		
 		
 		Promise<JsonObject> promise = Promise.promise();				 
@@ -298,5 +301,19 @@ public class BookJooqQueries {
 		return promise.future();
 	}
 	
-	
+	/*
+	public void someMethod() {
+		DSLContext context;
+		Optional<Integer> result = Optional.of(context
+			.insertInto(
+				table("table"), field("f1"), field("f2"), field("f3"), field("f4"), field("f5"), 
+				field("f6"), field("f7"), field("f8"), field("f9")))
+			.map(statement -> {
+				for (Media media : mediaList) {
+					statement.values(media.f1(), media.f2);
+				}
+				return statement.execute();
+			});		
+	}	
+	*/
 }

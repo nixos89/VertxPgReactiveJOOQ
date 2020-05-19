@@ -73,7 +73,7 @@ public class RowMappers {
             com.ns.vertx.pg.jooq.tables.pojos.Orders pojo = new com.ns.vertx.pg.jooq.tables.pojos.Orders();
             pojo.setOrderId(row.getLong("order_id"));
             pojo.setTotal(row.getDouble("total"));
-            // Omitting unrecognized type DataType [ t=date; p=0; s=0; u="pg_catalog"."date"; j=null ] (java.sql.Date) for column order_date!
+            pojo.setOrderDate(row.getLocalDateTime("order_date"));
             pojo.setUserId(row.getInteger("user_id"));
             return pojo;
         };

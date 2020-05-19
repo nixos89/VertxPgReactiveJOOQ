@@ -1,12 +1,11 @@
 package com.ns.vertx.pg.service;
 
-import static com.ns.vertx.pg.jooq.tables.Book.BOOK;
 import static com.ns.vertx.pg.jooq.tables.Author.AUTHOR;
-import static com.ns.vertx.pg.jooq.tables.Category.CATEGORY;
 import static com.ns.vertx.pg.jooq.tables.AuthorBook.AUTHOR_BOOK;
+import static com.ns.vertx.pg.jooq.tables.Book.BOOK;
+import static com.ns.vertx.pg.jooq.tables.Category.CATEGORY;
 import static com.ns.vertx.pg.jooq.tables.CategoryBook.CATEGORY_BOOK;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -15,24 +14,19 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.jooq.Configuration;
-import org.jooq.InsertValuesStepN;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ns.vertx.pg.DBQueries;
 import com.ns.vertx.pg.jooq.tables.daos.AuthorBookDao;
 import com.ns.vertx.pg.jooq.tables.daos.BookDao;
 import com.ns.vertx.pg.jooq.tables.daos.CategoryBookDao;
-import com.ns.vertx.pg.jooq.tables.mappers.RowMappers;
 import com.ns.vertx.pg.jooq.tables.pojos.AuthorBook;
 import com.ns.vertx.pg.jooq.tables.pojos.Book;
 import com.ns.vertx.pg.jooq.tables.pojos.CategoryBook;
-import com.ns.vertx.pg.jooq.tables.records.AuthorBookRecord;
-import com.ns.vertx.pg.jooq.tables.records.CategoryBookRecord;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
-import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicQueryExecutor;
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -58,6 +52,8 @@ public class BookServiceImpl {
 			.put("categories", booksQR.get("categories", JsonArray.class));				
 	}
 	
+	// ******************************************************************************** 
+	
 	private static JsonObject extractBooksFromQR(QueryResult queryResult){
 		JsonArray booksJA = new JsonArray();
 		for(QueryResult qr: queryResult.asList()) {
@@ -67,7 +63,8 @@ public class BookServiceImpl {
 		return new JsonObject().put("books", booksJA);
 	}	
 	
-	// FIXME: dfd
+	// ********************************************************************************
+	
 	private static JsonObject extractBookFromRS(RowSet<Row> rowSetBook){
 		LOGGER.info("rowSetBook.columnsNames(): " + rowSetBook.columnsNames());
 		
@@ -84,6 +81,34 @@ public class BookServiceImpl {
 		return bookJO;
 	}
 	
+	// ********************************************************************************
+	
+	private static JsonObject extractBooksFromLR(List<Row> booksLR){		
+		JsonObject bookJO = new JsonObject();
+		JsonObject categoryJO = new JsonObject();
+		JsonArray booksJA = new JsonArray();
+//		JsonObject authorJO = new JsonObject();
+//		JsonArray categoriesJA = new JsonArray();
+//		JsonArray authorsJA = new JsonArray(); 
+		
+		for (Row row : booksLR) {
+			bookJO.put("book_id", row.getLong("book_id"));
+			bookJO.put("title", row.getString("title"));
+			bookJO.put("amount", row.getInteger("amount"));
+			bookJO.put("price", row.getDouble("price"));
+			bookJO.put("price", row.getDouble("price"));
+			categoryJO.put("category_id", row.getLong("category_id"));
+			categoryJO.put("name", row.getString("name"));
+			categoryJO.put("is_deleted", row.getString("is_deleted"));
+			
+			booksJA.add(bookJO);
+			bookJO.clear();
+		}
+		JsonObject joBooks= new JsonObject().put("books", booksJA);		
+		return joBooks;
+	}
+	
+	// *********************************************************************************************************************************
 	
 	public static Future<JsonObject> getAllBooksJooq(ReactiveClassicGenericQueryExecutor queryExecutor) {
 		Promise<JsonObject> finalRes = Promise.promise();					
@@ -95,7 +120,6 @@ public class BookServiceImpl {
 			if (handler.succeeded()) {								
 				QueryResult booksQR = handler.result();				
 				JsonObject booksJsonObject = extractBooksFromQR(booksQR);
-				//LOGGER.info("bookJsonObject.encodePrettily(): " + booksJsonObject.encodePrettily());
 				finalRes.complete(booksJsonObject);
 	    	} else {
 	    		LOGGER.error("Error, something failed in retrivening ALL books! Cause: " 
@@ -108,31 +132,69 @@ public class BookServiceImpl {
 		return finalRes.future();
 	}
 	
-	
+	// *********************************************************************************************************************************	
+	// FIXME: distinction of Authors and Categories to be returned as an JSON_ARRAY
 	public static Future<JsonObject> getAllBooksByAuthorIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long authorId) {
 		Promise<JsonObject> finalRes = Promise.promise();					
-//		Future<List<Row>> bookFuture = queryExecutor.transaction(qe -> {			
-//			return qe.findManyRow(dsl -> dsl
-//				.select(BOOK.BOOK_ID, BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED, AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME, CATEGORY.CATEGORY_ID, CATEGORY.NAME, CATEGORY.IS_DELETED));
-//		});				
-//		
-//	    bookFuture.onComplete(handler -> {
-//			if (handler.succeeded()) {								
-//				List<Row> booksLR = handler.result();				
-//				JsonObject booksJsonObject = new JsonObject();// = extractBooksFromQR(booksLR);
-//				//LOGGER.info("bookJsonObject.encodePrettily(): " + booksJsonObject.encodePrettily());
-//				finalRes.complete(booksJsonObject);
-//	    	} else {
-//	    		LOGGER.error("Error, something failed in retrivening ALL books! Cause: " 
-//	    				+ handler.cause().getMessage());
-//	    		queryExecutor.rollback();
-//	    		finalRes.fail(handler.cause());
-//	    	}
-//	    }); 
+		Future<List<Row>> bookFuture = queryExecutor.transaction(qe -> {			
+			return qe.findManyRow(dsl -> dsl
+				// FIXME: must use DISTINCT for AUTHORS and CATEGORIES to be able to return ALL of them in 1 ROW!!!
+				.select(BOOK.BOOK_ID, BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED, 
+						AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME, 
+						CATEGORY.CATEGORY_ID, CATEGORY.NAME, CATEGORY.IS_DELETED)
+				.from(BOOK
+					.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
+					.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
+					.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
+					.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID)))
+				.where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(authorId)))
+				.groupBy(BOOK.BOOK_ID).orderBy(BOOK.BOOK_ID.asc())
+			);
+		});						
+		
+	    bookFuture.onComplete(handler -> {
+			if (handler.succeeded()) {								
+				List<Row> booksLR = handler.result();				
+				JsonObject booksJsonObject = extractBooksFromLR(booksLR);
+				LOGGER.info("bookJsonObject.encodePrettily(): " + booksJsonObject.encodePrettily());
+				finalRes.complete(booksJsonObject);
+	    	} else {
+	    		LOGGER.error("Error, something failed in retrivening ALL books! Cause: " 
+	    				+ handler.cause().getMessage());
+	    		queryExecutor.rollback();
+	    		finalRes.fail(handler.cause());
+	    	}
+	    }); 
 		
 		return finalRes.future();
 	}
 	
+	// *********************************************************************************************************************************
+	
+	public static Future<JsonObject> getAllBooksByAuthorIdJooqMix(ReactiveClassicGenericQueryExecutor queryExecutor, long authorId) {
+		Promise<JsonObject> finalRes = Promise.promise();					
+		Future<QueryResult> bookFuture = queryExecutor.transaction(qe -> {
+			return qe.query(dsl -> dsl
+			    .resultQuery(DBQueries.GET_ALL_BOOKS_BY_AUTHOR_ID, Long.valueOf(authorId)));
+		});					
+		
+	    bookFuture.onComplete(handler -> {
+			if (handler.succeeded()) {								
+				QueryResult booksByAuthorIdQR = handler.result();				
+				JsonObject booksJsonObject = extractBooksFromQR(booksByAuthorIdQR);
+				LOGGER.info("bookJsonObject.encodePrettily(): " + booksJsonObject.encodePrettily());
+				finalRes.complete(booksJsonObject);
+	    	} else {
+	    		LOGGER.error("Error, something failed in retrivening ALL books! Cause: " + handler.cause().getMessage());
+	    		queryExecutor.rollback();
+	    		finalRes.fail(handler.cause());
+	    	}
+	    }); 
+		
+		return finalRes.future();
+	}
+	
+	// *********************************************************************************************************************************
 		
 	public static Future<JsonObject> getBookByIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long bookId) {
 		Promise<JsonObject> finalRes = Promise.promise();
@@ -145,7 +207,7 @@ public class BookServiceImpl {
 			if (handler.succeeded()) {
 				//LOGGER.info("Success, query has passed for book ID = " + book_id);												
 				QueryResult booksQR = handler.result();				
-				if(booksQR != null) {
+				if (booksQR != null) {
 					JsonObject bookJsonObject = fillBook(booksQR);				
 					finalRes.complete(bookJsonObject);
 				} else {				
@@ -166,73 +228,75 @@ public class BookServiceImpl {
 	
 	// **************************************************************************************************************************	
 	
-	public static Future<Void> createBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, 
-			JsonObject bookJO, Configuration configuration, PgPool pgClient) {
+	public static Future<Void> createBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, JsonObject bookJO,  
+			Configuration configuration, PgPool pgClient, AuthorBookDao authorBookDAO, CategoryBookDao categoryBookDAO) {
 		Promise<Void> promise = Promise.promise();			
-		Book bookPojo = new Book(bookJO); // this is OVERHEAD ("bookJO" can b used to extract book FIELDS info)
-//		ReactiveClassicQueryExecutor queryExecutorAuthorBookNG = new ReactiveClassicQueryExecutor(configuration, pgClient, RowMappers.getAuthorBookMapper());		
-//		queryExecutor.beginTransaction();
+		Book bookPojo = new Book(bookJO); 
 		
-		Future<Integer> transactionFuture = queryExecutor.transaction(qe -> qe
-			.executeAny(dsl -> dsl
+		Future<Void> transactionFuture = queryExecutor.beginTransaction().compose(transactionQE-> 
+			transactionQE.executeAny(dsl -> dsl		
 				.insertInto(BOOK)
 				.columns(BOOK.TITLE, BOOK.AMOUNT, BOOK.PRICE, BOOK.IS_DELETED)
 				.values(bookPojo.getTitle(), bookPojo.getAmount(), bookPojo.getPrice(), bookPojo.getIsDeleted())
-				.returningResult(BOOK.BOOK_ID, BOOK.TITLE, BOOK.AMOUNT, BOOK.PRICE, BOOK.IS_DELETED))
-			.compose(insertedBook -> { 	// insertedBook is of type: RowSet<Row>			
+				.returningResult(BOOK.BOOK_ID, BOOK.TITLE, BOOK.AMOUNT, BOOK.PRICE, BOOK.IS_DELETED)
+			).compose(insertedBook -> { 			
 				JsonObject resultJO =  extractBookFromRS(insertedBook);
 				final Long bookId = resultJO.getLong("book_id");
 				LOGGER.info("saved book:\n" + resultJO.encodePrettily());
 				
-				List<Long> authorIds = bookJO.getJsonArray("author_ids").stream()
-						.mapToLong(a -> Long.valueOf(String.valueOf(a)))
-						.boxed().collect(Collectors.toList());
-				
-				List<AuthorBookRecord> authorBookRecordList = new ArrayList<AuthorBookRecord>();				
-				for(Long authorId: authorIds) {					
-					AuthorBookRecord authorBookRecord = new AuthorBookRecord(authorId, bookId);					
-					LOGGER.info("authorBookRecord.key().toString() = \n" + authorBookRecord.key().toString());
-					authorBookRecordList.add(authorBookRecord); 
+				final List<Long> authorIds = bookJO.getJsonArray("author_ids").stream()
+						.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toList());
+								
+				Set<AuthorBook> authorBookSet = new HashSet<>();
+				for(Long autID: authorIds) {				
+					AuthorBook ab = new AuthorBook(autID, bookId);
+					LOGGER.info(ab.toString());
+					authorBookSet.add(ab);							
 				}							
 							
 				List<Long> categoryIds = bookJO.getJsonArray("category_ids").stream()
-						.mapToLong(c -> Long.valueOf(String.valueOf(c)))
-						.boxed().collect(Collectors.toList());			
-				List<CategoryBookRecord> categoryBookRecordList = new ArrayList<CategoryBookRecord>();
-				for(Long categoryId: categoryIds) {					
-					CategoryBookRecord categoryBookRecord = new CategoryBookRecord(categoryId, bookId);					
-					LOGGER.info("categoryBookRecord.key().toString() = \n" + categoryBookRecord.key().toString());
-					categoryBookRecordList.add(categoryBookRecord); 
-				}							
+						.mapToLong(c -> Long.valueOf(String.valueOf(c))).boxed().collect(Collectors.toList());			
 				
-				return queryExecutor.execute(dsl -> dsl
+				Set<CategoryBook> categoryBookSet = new HashSet<>();
+				for(Long categoryId: categoryIds) {					
+					CategoryBook cb = new CategoryBook(categoryId, bookId);
+					LOGGER.info(cb.toString());
+					categoryBookSet.add(cb);
+				}	
+								
+				Future<Integer> insertAB = transactionQE.execute(dsl -> dsl
 					.insertInto(AUTHOR_BOOK)
-					.columns(AUTHOR_BOOK.AUTHOR_ID, AUTHOR_BOOK.BOOK_ID)
-					.values(authorBookRecordList)
-				).compose(res -> queryExecutor.execute(dsl -> dsl
+					.values(authorBookSet)
+				);
+				
+				Future<Integer> insertCB = transactionQE.execute(dsl -> dsl
 					.insertInto(CATEGORY_BOOK)
-					.columns(CATEGORY_BOOK.CATEGORY_ID, CATEGORY_BOOK.BOOK_ID)
-					.values(categoryBookRecordList)
-				)); 				
+					.values(categoryBookSet)
+				);
+								
+				return CompositeFuture.all(insertAB, insertCB).compose(res -> {
+					if (res.succeeded()) {
+						LOGGER.info("Commiting transcation...");
+						return transactionQE.commit();
+					} else {
+						LOGGER.info("Rolling-back transcation...");
+						return transactionQE.rollback();
+					}					
+				});				
 		}));
 		transactionFuture.onComplete(handler -> {
 			if (handler.succeeded()) {
 				LOGGER.info("ALL is good!");
 				promise.complete();
 			} else {
-				LOGGER.info("Error, somethin' WENT WRRRRRONG!!! handler.result() = " + handler.result() + "!\nCause: " + handler.cause());
-//					Future<Void> rollbackFuture = queryExecutor.rollback();
-//					rollbackFuture.onComplete(rollbacked -> LOGGER.info("Success, transactions has rollbacked!"));
-//					rollbackFuture.onFailure(failedRollback -> LOGGER.info("Error, transaction has FAILED to rollback! Cause: " + failedRollback.getCause()));
+				LOGGER.info("Error, somethin' WENT WRRRONG!! handler.result() = " + handler.result());
 				promise.handle(Future.failedFuture(handler.cause()));
 			}
 		});
-		
 		return promise.future();
 	}
-	
-	// ***************************************************************************************************************
-	// ***************************************************************************************************************	
+		
+	// *********************************************************************************************************************************	
 	// FIXME: re-implement Book UPDATE method -> REMOVE DAO objects!!!
 	public static Future<JsonObject> updateBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, JsonObject bookJO, 
 			BookDao bookDAO, AuthorBookDao authorBookDAO, CategoryBookDao categoryBookDAO, long bookId) {		
@@ -304,7 +368,7 @@ public class BookServiceImpl {
 						.where(CATEGORY_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
 						.and(CATEGORY_BOOK.CATEGORY_ID.in(deleteCategoryIdsSet)));
 			} else if (!toInsertCategoryIdsSet.isEmpty() && deleteCategoryIdsSet.isEmpty()) {
-				return categoryBookDAO.insert(bookCategories);
+				return categoryBookDAO.insert(bookCategories); // FIXME: use 'queryExecutor' object instead of categoryBookDAO
 			} else {
 				return Future.succeededFuture();
 			}
@@ -316,20 +380,18 @@ public class BookServiceImpl {
 	private static Future<Integer> iterateAuthorBook(ReactiveClassicGenericQueryExecutor queryExecutor,
 			AuthorBookDao authorBookDAO, Set<Long> authorUpdatedIds, long bookId) {
 		
-//		queryExecutor.beginTransaction()
-
 		return authorBookDAO.findManyByBookId(Arrays.asList(bookId)).compose(existingAC -> {
 
 			Set<Long> existingBAuhtorIds = existingAC.stream().map(ab -> ab.getAuthorId()).collect(Collectors.toSet());
 
 			Set<Long> deleteAuthorIdsSet = existingBAuhtorIds.stream()
-					.filter(autId -> !authorUpdatedIds.contains(autId)).collect(Collectors.toSet());
+				.filter(autId -> !authorUpdatedIds.contains(autId)).collect(Collectors.toSet());
 
 			LOGGER.info("Author IDs to DELETE:");
 			deleteAuthorIdsSet.stream().forEach(System.out::println);
 
 			Set<Long> toInsertAuthorIdsSet = authorUpdatedIds.stream()
-					.filter(catId -> !existingBAuhtorIds.contains(catId)).collect(Collectors.toSet());
+				.filter(catId -> !existingBAuhtorIds.contains(catId)).collect(Collectors.toSet());
 
 			LOGGER.info("Author IDs to INSERT:");
 			toInsertAuthorIdsSet.stream().forEach(System.out::println);
@@ -342,19 +404,19 @@ public class BookServiceImpl {
 			
 			if (!toInsertAuthorIdsSet.isEmpty() && !deleteAuthorIdsSet.isEmpty()) {
 				return queryExecutor.execute(dsl -> dsl
-						.deleteFrom(AUTHOR_BOOK)
-						.where(AUTHOR_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
-						.and(AUTHOR_BOOK.AUTHOR_ID.in(deleteAuthorIdsSet))
+					.deleteFrom(AUTHOR_BOOK)
+					.where(AUTHOR_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
+					.and(AUTHOR_BOOK.AUTHOR_ID.in(deleteAuthorIdsSet))
 				).compose(res -> authorBookDAO.insert(bookAuthors));
 				
 			} else if (!toInsertAuthorIdsSet.isEmpty() && deleteAuthorIdsSet.isEmpty()) {
-				return authorBookDAO.insert(bookAuthors);
+				return authorBookDAO.insert(bookAuthors); // FIXME: use 'queryExecutor' object instead of authorBookDAO
 			} else if (toInsertAuthorIdsSet.isEmpty() && !deleteAuthorIdsSet.isEmpty()) {
 				
 				return queryExecutor.execute(dsl -> dsl
-						.deleteFrom(AUTHOR_BOOK)
-						.where(AUTHOR_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
-						.and(AUTHOR_BOOK.AUTHOR_ID.in(deleteAuthorIdsSet)));
+					.deleteFrom(AUTHOR_BOOK)
+					.where(AUTHOR_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
+					.and(AUTHOR_BOOK.AUTHOR_ID.in(deleteAuthorIdsSet)));
 			} else {
 				return Future.succeededFuture();
 			}			
@@ -377,15 +439,13 @@ public class BookServiceImpl {
 				LOGGER.error("Error, deletion failed for Book id = " + id);
 				Future<Void> rollbackFuture = queryExecutor.rollback();
 				rollbackFuture.onSuccess(handler -> LOGGER.info("Transaction successfully rolledback!"));
-				rollbackFuture.onFailure(handler -> LOGGER.info("Error, transcation did NOT rollback! Cause: " + handler.getCause()));
-				
+				rollbackFuture.onFailure(handler -> LOGGER.info("Error, transcation did NOT rollback! Cause: " + handler.getCause()));				
 				promise.handle(Future.failedFuture(new NoSuchElementException("No book with id = " + id)));
 			}
 		});
 		
 		return promise.future();
 	}
-	
 	
 
 }

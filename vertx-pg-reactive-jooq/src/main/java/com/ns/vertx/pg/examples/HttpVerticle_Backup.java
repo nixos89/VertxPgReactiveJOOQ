@@ -1,7 +1,7 @@
 package com.ns.vertx.pg.examples;
 
 import static com.ns.vertx.pg.examples.ActionHelper.*;
-import static com.ns.vertx.pg.DBQueries.*;
+import static com.ns.vertx.pg.service.DBQueries.*;
 
 import java.util.NoSuchElementException;
 
@@ -11,10 +11,10 @@ import org.jooq.impl.DefaultConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ns.vertx.pg.DBQueries;
 import com.ns.vertx.pg.jooq.tables.Category;
 import com.ns.vertx.pg.jooq.tables.daos.CategoryDao;
 import com.ns.vertx.pg.jooq.tables.interfaces.ICategory;
+import com.ns.vertx.pg.service.DBQueries;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 

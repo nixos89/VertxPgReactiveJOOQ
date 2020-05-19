@@ -1,5 +1,7 @@
 package com.ns.vertx.pg;
 
+import com.ns.vertx.pg.http.HttpVerticle;
+
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 

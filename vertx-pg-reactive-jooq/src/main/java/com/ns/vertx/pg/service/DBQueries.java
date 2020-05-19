@@ -1,4 +1,4 @@
-package com.ns.vertx.pg;
+package com.ns.vertx.pg.service;
 
 public class DBQueries {
 	
@@ -9,7 +9,7 @@ public class DBQueries {
 	public static String CREATE_ROLE_TABLE_SQL = "CREATE TABLE IF NOT EXISTS Role(role_id BIGSERIAL PRIMARY KEY, name VARCHAR(30));";
 	public static String CREATE_USER_TABLE_SQL = "CREATE TABLE IF NOT EXISTS Users (user_id BIGSERIAL PRIMARY KEY, first_name VARCHAR(30), last_name VARCHAR(30), " +
             "email VARCHAR(30), username VARCHAR(15), password VARCHAR(255), role_id INTEGER REFERENCES Role(role_id) );";
-	public static String CREATE_ORDER_TABLE_SQL = "CREATE TABLE IF NOT EXISTS Orders (order_id BIGSERIAL PRIMARY KEY, total double precision, order_date DATE, user_id INTEGER REFERENCES Users(user_id) );";
+	public static String CREATE_ORDER_TABLE_SQL = "CREATE TABLE IF NOT EXISTS Orders (order_id BIGSERIAL PRIMARY KEY, total double precision, order_date TIMESTAMP, user_id INTEGER REFERENCES Users(user_id) );";
 	public static String CREATE_ORDER_ITEM_TABLE_SQL = "CREATE TABLE IF NOT EXISTS Order_Item ( order_item_id BIGSERIAL PRIMARY KEY, amount INTEGER, book_id BIGINT REFERENCES Book(book_id), order_id BIGINT REFERENCES Orders(order_id) );";
 	
 	// intermediate tables
@@ -46,6 +46,17 @@ public class DBQueries {
             "LEFT JOIN author AS aut ON ab.author_id = aut.author_id " +
             "LEFT JOIN category_book AS cb ON b.book_id = cb.book_id " +
             "LEFT JOIN category AS cat ON cb.category_id = cat.category_id " +
+            "GROUP BY b_id ORDER BY b_id ASC;";
+	
+	
+	public static String GET_ALL_BOOKS_BY_AUTHOR_ID = "SELECT b.book_id AS b_id, b.title, b.price, b.amount, b.is_deleted, " +
+			"to_json(array_agg(DISTINCT aut.*)) as authors, to_json(array_agg(DISTINCT cat.*)) as categories " +  			
+			"FROM book b " + 
+            "LEFT JOIN author_book AS ab ON b.book_id = ab.book_id " +
+            "LEFT JOIN author AS aut ON ab.author_id = aut.author_id " +
+            "LEFT JOIN category_book AS cb ON b.book_id = cb.book_id " +
+            "LEFT JOIN category AS cat ON cb.category_id = cat.category_id " +
+            "WHERE aut.author_id = :id " + 
             "GROUP BY b_id ORDER BY b_id ASC;";
 	
 }

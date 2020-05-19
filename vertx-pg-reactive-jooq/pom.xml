@@ -11,7 +11,7 @@
 		<vertx.version>3.9.0</vertx.version>
 		<main.verticle>com.ns.vertx.pg.MainVerticle</main.verticle>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<jooq.version>3.11.9</jooq.version>
+		<jooq.version>3.13.1</jooq.version>
 		<vertx-jooq-classic-reactive.version>5.1.1</vertx-jooq-classic-reactive.version>
 	</properties>
 
@@ -227,23 +227,31 @@
 								<!-- Convert tinyint to boolean -->
 								<forcedType>
 									<name>BOOLEAN</name>
-									<types>(?i:TINYINT)</types>
+									<includeTypes>(?i:TINYINT)</includeTypes>
+									<nullability>ALL</nullability>
+									<objectType>ALL</objectType>
 								</forcedType>
 								<!-- Convert varchar column with name 'someJsonObject' to a io.vertx.core.json.JsonObject -->
 								<forcedType>
 									<userType>io.vertx.core.json.JsonObject</userType>
 									<converter>io.github.jklingsporn.vertx.jooq.shared.JsonObjectConverter</converter>
-									<expression>someJsonObject</expression>
-									<types>.*</types>
+									<includeExpression>someJsonObject</includeExpression>
+									<includeTypes>.*</includeTypes>
+									<nullability>ALL</nullability>
+									<objectType>ALL</objectType>
 								</forcedType>
 								<!-- Convert varchar column with name 'someJsonArray' to a io.vertx.core.json.JsonArray -->
 								<forcedType>
 									<userType>io.vertx.core.json.JsonArray</userType>
 									<converter>io.github.jklingsporn.vertx.jooq.shared.JsonArrayConverter</converter>
-									<expression>someJsonArray</expression>
-									<types>.*</types>
+									<includeExpression>someJsonArray</includeExpression>
+									<includeTypes>.*</includeTypes>
+									<nullability>ALL</nullability>
+									<objectType>ALL</objectType>
 								</forcedType>
 							</forcedTypes>
+<!-- 							<dateAsTimestamp>true</dateAsTimestamp> -->
+							<recordTimestampFields>REC_TIMESTAMP</recordTimestampFields>							
 						</database>
 						<target>
 							<!-- This is where jOOQ will put your files -->
@@ -254,6 +262,7 @@
 							<interfaces>true</interfaces>
 							<daos>true</daos>
 							<fluentSetters>true</fluentSetters>
+<!-- 							<javaTimeTypes>true</javaTimeTypes> added because of Timestamp type for order_date field -->
 						</generate>
 
 						<strategy>
