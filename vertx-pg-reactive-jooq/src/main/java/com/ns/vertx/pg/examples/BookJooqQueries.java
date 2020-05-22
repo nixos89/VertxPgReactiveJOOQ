@@ -8,11 +8,9 @@ import static com.ns.vertx.pg.jooq.tables.CategoryBook.CATEGORY_BOOK;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.jooq.DSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

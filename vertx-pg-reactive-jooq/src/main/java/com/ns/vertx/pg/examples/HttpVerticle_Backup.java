@@ -1,9 +1,7 @@
 package com.ns.vertx.pg.examples;
 
-import static com.ns.vertx.pg.examples.ActionHelper.*;
+import static com.ns.vertx.pg.examples.ActionHelper.ok;
 import static com.ns.vertx.pg.service.DBQueries.*;
-
-import java.util.NoSuchElementException;
 
 import org.jooq.Configuration;
 import org.jooq.SQLDialect;
@@ -14,10 +12,9 @@ import org.slf4j.LoggerFactory;
 import com.ns.vertx.pg.jooq.tables.Category;
 import com.ns.vertx.pg.jooq.tables.daos.CategoryDao;
 import com.ns.vertx.pg.jooq.tables.interfaces.ICategory;
-import com.ns.vertx.pg.service.DBQueries;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
-
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -36,8 +33,6 @@ import io.vertx.sqlclient.SqlConnection;
 import io.vertx.sqlclient.Transaction;
 import io.vertx.sqlclient.Tuple;
 
-import io.vertx.core.AbstractVerticle;
-
 public class HttpVerticle_Backup extends AbstractVerticle {
 
 	private final static Logger LOGGER = LoggerFactory.getLogger(HttpVerticle_Backup.class);
@@ -51,7 +46,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 		Router routerREST = Router.router(vertx);
 		routerREST.get("/categories").handler(this::getAllCategoriesHandler);
 		routerREST.get("/categories/:id").handler(this::getCategoryByIdHandler);
-		routerREST.delete("/categories/:id").handler(this::deleteCategoryHandler);
+//		routerREST.delete("/categories/:id").handler(this::deleteCategoryHandler);
 		routerREST.post().handler(BodyHandler.create());
 		routerREST.put().handler(BodyHandler.create());
 		routerREST.post("/categories").handler(this::createCategoryHandler);
@@ -93,7 +88,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 		// no other DB-Configuration necessary because jOOQ is only used to render our
 		// statements - not for execution
 		CategoryDao categoryDAO = new CategoryDao(configuration, pgClient);
-		categoryDAO.findOneById(1L).setHandler(res -> {
+		categoryDAO.findOneById(1L).onComplete(res -> {
 			if (res.succeeded()) {
 				//
 				vertx.eventBus().send("Something", res.result().toJson());
@@ -111,7 +106,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 				.execute(dsl -> dsl.update(com.ns.vertx.pg.jooq.tables.Category.CATEGORY)
 						.set(com.ns.vertx.pg.jooq.tables.Category.CATEGORY.NAME, "Virus Horror")
 						.where(com.ns.vertx.pg.jooq.tables.Category.CATEGORY.CATEGORY_ID.eq(1L)));
-		updatedCategory.setHandler(res -> {
+		updatedCategory.onComplete(res -> {
 			if (res.succeeded()) {
 				LOGGER.info("Rows updated: " + res.result());
 			} else {
@@ -147,7 +142,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 			.deleteFrom(com.ns.vertx.pg.jooq.tables.Category.CATEGORY)
 			.where(com.ns.vertx.pg.jooq.tables.Category.CATEGORY.NAME.eq("Adventure")));
 		
-		deletedCategories.setHandler(res -> {
+		deletedCategories.onComplete(res -> {
 			if (res.succeeded()) {
 				LOGGER.info("Rows deleted: " + res.result());
 			} else {
@@ -158,14 +153,14 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 
 		Future<Void> futureConnection = connect().compose(connection -> {
 			Promise<Void> retFuture = Promise.promise();
-			createTableIfNeeded().future().setHandler(x -> {
+			createTableIfNeeded().future().onComplete(x -> {
 				connection.close();
 				retFuture.handle(x.mapEmpty());
 			});
 			return retFuture.future();
 		});
 
-		futureConnection.compose(v -> createHttpServer(pgClient, routerAPI)).setHandler(startPromise);
+		futureConnection.compose(v -> createHttpServer(pgClient, routerAPI)).onComplete(startPromise);
 	}// start::END
 
 	public Future<SqlConnection> connect() {
@@ -292,31 +287,21 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 		// TODO:implement it
 		String name = rc.request().getParam("name");
 		Boolean isDeleted = Boolean.valueOf(rc.request().getParam("is_deleted"));
-		createCategoryJooq(queryExecutor, name, isDeleted).setHandler(ok(rc));
+		createCategoryJooq(queryExecutor, name, isDeleted).onComplete(ok(rc));
 	}
 
-	private Future<Integer> createCategoryJooq(ReactiveClassicGenericQueryExecutor queryExecutor, String name,
+	private Future<Void> createCategoryJooq(ReactiveClassicGenericQueryExecutor queryExecutor, String name,
 			boolean isDeleted) {
-		// TODO: fix this problem with returning 'T' in Future<T> (so object which holds
-		// 'category_id' can be returned) ... AND also replace "queryExecutor.query(..)" with "queryExecutor.execute(..)"
-		Future<Integer> retVal = queryExecutor.execute(dsl -> dsl
+		Promise<Void> promise = Promise.promise();
+		Future<RowSet<Row>> retVal = queryExecutor.executeAny(dsl -> dsl
 				.insertInto(Category.CATEGORY)
 				.columns(Category.CATEGORY.NAME, Category.CATEGORY.IS_DELETED)
 				.values(name, isDeleted)
+				.returning(Category.CATEGORY.CATEGORY_ID)
 		);		
-		
-//		Future<Integer> retVal = Future.future();
-		// next invocation of query(..) method causes HTTP 500
-//		Future<QueryResult> res = queryExecutor.query(dsl -> (ResultQuery<Record1<Long>>) dsl
-//			.insertInto(Category.CATEGORY)
-//			.columns(Category.CATEGORY.NAME, Category.CATEGORY.IS_DELETED)
-//			.values(name, isDeleted)
-//			.returningResult(Category.CATEGORY.CATEGORY_ID, Category.CATEGORY.NAME, Category.CATEGORY.IS_DELETED)
-//			.fetchOne()
-//		);
-//		QueryResult qr = res.result();
-//		System.out.println("ID = " + qr.get(0, Long.class) + ", catName = " + qr.get(1, String.class) + " is_deleted = " + qr.get(2, boolean.class));
-		return retVal;
+		retVal.onSuccess(handler -> promise.complete());
+		retVal.onFailure(handler -> promise.fail(handler));
+		return promise.future();
 	}
 
 	// TODO: Before testing ADJUST Connection (before it was connect() method) so it
@@ -342,7 +327,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 		return retVal;
 	}
 
-	
+	/*
 	private Future<Void> deleteCategory(SqlConnection connection, int id) {
 		Promise<Void> promise = Promise.promise();
 		connection.preparedQuery(DBQueries.DELETE_CATEGORY_BY_ID_SQL).execute(Tuple.of(id), fetch -> {
@@ -360,5 +345,5 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 		int id = Integer.valueOf(rc.request().getParam("id"));
 //		connect().compose(connection -> deleteCategory(connection, id)).setHandler(noContent(rc));
 	}
-
+*/
 }
