@@ -243,8 +243,7 @@ public class HttpVerticle extends AbstractVerticle {
 		LOGGER.info("In 'createBookHandler(..)' bookJO =\n" + bookJO.encodePrettily());		
 		/* BookJooqQueries.createBookJooq(queryExecutor, bookDAO, authorBookDAO, categoryBookDAO, bookJO)
 			.onComplete(created(rc)); */		
-		BookServiceImpl.createBookJooq(queryExecutor, bookJO, configuration, pgClient, authorBookDAO, categoryBookDAO)
-					   .onComplete(created(rc));
+		BookServiceImpl.createBookJooq(queryExecutor, bookJO).onComplete(created(rc));
 	}
 
 	private void updateAuthorHandler(RoutingContext rc) {
