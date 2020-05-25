@@ -16,6 +16,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
 
+// IMPORTANT: this class uses queryExecutor and DAO objects for querying and upsert operations, but NOT transactions!
 public class CategoryJooqQueries {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(CategoryJooqQueries.class);

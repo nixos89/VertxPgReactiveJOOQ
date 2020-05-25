@@ -1,8 +1,17 @@
 package com.ns.vertx.pg.service;
 
+import static com.ns.vertx.pg.jooq.tables.Author.AUTHOR;
+import static com.ns.vertx.pg.jooq.tables.Book.BOOK;
+import static com.ns.vertx.pg.jooq.tables.Category.CATEGORY;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.jooq.CommonTableExpression;
+import org.jooq.DSLContext;
+import org.jooq.Record2;
+import org.jooq.impl.DSL;
 
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.json.JsonArray;
@@ -19,7 +28,7 @@ public class BookUtilHelper {
 			.put("title", booksQR.get("title", String.class))
 			.put("price", booksQR.get("price", Double.class))
 			.put("amount", booksQR.get("amount", Integer.class))
-			.put("deleted", booksQR.get("is_deleted", Boolean.class))
+			.put("is_deleted", booksQR.get("is_deleted", Boolean.class))
 			.put("authors", booksQR.get("authors", JsonArray.class))
 			.put("categories", booksQR.get("categories", JsonArray.class));				
 	}
@@ -43,7 +52,7 @@ public class BookUtilHelper {
 			bookJO.put("title", row.getString("title"));
 			bookJO.put("amount", row.getInteger("amount"));
 			bookJO.put("price", row.getDouble("price"));
-			bookJO.put("price", row.getDouble("price"));
+			bookJO.put("is_deleted", row.getBoolean("is_deleted"));
 			categoryJO.put("category_id", row.getLong("category_id"));
 			categoryJO.put("name", row.getString("name"));
 			categoryJO.put("is_deleted", row.getString("is_deleted"));
@@ -85,5 +94,23 @@ public class BookUtilHelper {
 		}
 		return authorIds;
 	}
+
+	// **************************************************
+	// ************ jOOQ helper methods *****************
+	// **************************************************
+	
+	static CommonTableExpression<Record2<Long, Long>> author_book_tbl(DSLContext dsl, Long bookId, Set<Long> toInsertAutIdsSet){
+		return DSL.name("author_book_tbl").fields("book_id", "author_id")
+				  .as(dsl.select(BOOK.BOOK_ID, AUTHOR.AUTHOR_ID).from(BOOK).crossJoin(AUTHOR)
+						 .where( BOOK.BOOK_ID.eq(bookId).and(AUTHOR.AUTHOR_ID.in(toInsertAutIdsSet))));
+	}
+	
+	
+	static CommonTableExpression<Record2<Long, Long>> category_book_tbl(DSLContext dsl, Long bookId, Set<Long> toInsertCatIdsSet){
+		return DSL.name("category_book_tbl").fields("book_id", "category_id")
+				  .as(dsl.select(BOOK.BOOK_ID, CATEGORY.CATEGORY_ID).from(BOOK).crossJoin(CATEGORY)
+						 .where( BOOK.BOOK_ID.eq(bookId).and(CATEGORY.CATEGORY_ID.in(toInsertCatIdsSet)) ));
+	}
+	
 	
 }

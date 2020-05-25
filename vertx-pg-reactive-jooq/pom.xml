@@ -212,8 +212,20 @@
 						<password>postgres</password>
 					</jdbc>
 
+
+					<!-- Adding new generator for being able to access JavaGenerator class -->
+<!-- 					<generator> -->
+<!-- 						TODO: include plain jOOQ Code generator in order to be able to extend JavaGenerator class -->
+<!-- 						<name>org.jooq.codegen.JavaGenerator</name> -->
+<!-- 					</generator> -->
+
 					<!-- Generator parameters -->
 					<generator>
+						<!-- The default code generator. You can override this one, to generate your own code style.
+					         Supported generators:
+					         - org.jooq.codegen.JavaGenerator
+					         - org.jooq.codegen.ScalaGenerator
+					         Defaults to org.jooq.codegen.JavaGenerator -->					    
 						<name>io.github.jklingsporn.vertx.jooq.generate.classic.ClassicReactiveVertxGenerator</name>
 						<database>
 							<name>org.jooq.meta.postgres.PostgresDatabase</name>
@@ -250,7 +262,7 @@
 									<objectType>ALL</objectType>
 								</forcedType>
 							</forcedTypes>
-<!-- 							<dateAsTimestamp>true</dateAsTimestamp> -->
+							<dateAsTimestamp>true</dateAsTimestamp>
 							<recordTimestampFields>REC_TIMESTAMP</recordTimestampFields>							
 						</database>
 						<target>
@@ -269,6 +281,10 @@
 							<name>io.github.jklingsporn.vertx.jooq.generate.VertxGeneratorStrategy</name>
 						</strategy>
 					</generator>
+					
+					
+					
+					
 				</configuration>
 			</plugin>
 			<!-- Plug-in for "VertX-JOOQ-Classic-Reactive"::END -->

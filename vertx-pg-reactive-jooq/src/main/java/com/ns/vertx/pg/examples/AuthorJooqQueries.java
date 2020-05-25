@@ -10,9 +10,9 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
 
-/* This class holds STATIC methods which are used as helper methods for routing in order to reduce 
+/* IMPORTANT: this class uses queryExecutor and DAO objects for querying and upsert operations, but NOT transactions!
+ * This class holds STATIC methods which are used as helper methods for routing in order to reduce 
  * boiler-plate code from MainVerticle class */
-// TODO: copy-paste methods from CategoryJooqQueries and adjust them
 public class AuthorJooqQueries {	
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(AuthorJooqQueries.class);

@@ -34,6 +34,7 @@ import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.SqlConnection;
 import io.vertx.sqlclient.Tuple;
 
+// old class - used as a backup as a previous version during development
 public class HttpVerticle_Backup extends AbstractVerticle {
 
 	private final static Logger LOGGER = LoggerFactory.getLogger(HttpVerticle_Backup.class);
@@ -285,7 +286,6 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 	}
 
 	private void createCategoryHandler(RoutingContext rc) {
-		// TODO:implement it
 		String name = rc.request().getParam("name");
 		Boolean isDeleted = Boolean.valueOf(rc.request().getParam("is_deleted"));
 		createCategoryJooq(queryExecutor, name, isDeleted).onComplete(ok(rc));
@@ -305,8 +305,6 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 		return promise.future();
 	}
 
-	// TODO: Before testing ADJUST Connection (before it was connect() method) so it
-	// can run properly
 	private void updateCategoryHandler(RoutingContext rc) {
 		long id = (long) Integer.valueOf(rc.request().getParam("id"));
 		JsonObject catJO = rc.getBodyAsJson(); // NOTE: Use this approach when extracting value from RECEIVED JSON!
@@ -327,24 +325,5 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 		);
 		return retVal;
 	}
-
-	/*
-	private Future<Void> deleteCategory(SqlConnection connection, int id) {
-		Promise<Void> promise = Promise.promise();
-		connection.preparedQuery(DBQueries.DELETE_CATEGORY_BY_ID_SQL).execute(Tuple.of(id), fetch -> {
-			if (fetch.succeeded()) {
-				promise.handle(Future.succeededFuture());
-			} else {
-				promise.handle(Future.failedFuture(new NoSuchElementException("No category with id = " + id)));
-			}
-		});
-		return promise.future();
-	}
 	
-
-	private void deleteCategoryHandler(RoutingContext rc) {
-		int id = Integer.valueOf(rc.request().getParam("id"));
-//		connect().compose(connection -> deleteCategory(connection, id)).setHandler(noContent(rc));
-	}
-*/
 }

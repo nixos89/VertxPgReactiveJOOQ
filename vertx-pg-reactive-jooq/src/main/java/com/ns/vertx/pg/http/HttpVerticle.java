@@ -1,6 +1,8 @@
 package com.ns.vertx.pg.http;
 
-import static com.ns.vertx.pg.http.ActionHelper.*;
+import static com.ns.vertx.pg.http.ActionHelper.created;
+import static com.ns.vertx.pg.http.ActionHelper.noContent;
+import static com.ns.vertx.pg.http.ActionHelper.ok;
 import static com.ns.vertx.pg.service.DBQueries.CREATE_CATEGORY_TABLE_SQL;
 
 import org.jooq.Configuration;
@@ -9,9 +11,6 @@ import org.jooq.impl.DefaultConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ns.vertx.pg.jooq.tables.daos.AuthorBookDao;
-import com.ns.vertx.pg.jooq.tables.daos.BookDao;
-import com.ns.vertx.pg.jooq.tables.daos.CategoryBookDao;
 import com.ns.vertx.pg.jooq.tables.pojos.Author;
 import com.ns.vertx.pg.jooq.tables.pojos.Category;
 import com.ns.vertx.pg.service.AuthorServiceImpl;
@@ -43,9 +42,6 @@ public class HttpVerticle extends AbstractVerticle {
 	private Configuration configuration;
 	private ReactiveClassicGenericQueryExecutor queryExecutor;	
 		
-	private BookDao bookDAO;
-	private AuthorBookDao authorBookDAO;
-	private CategoryBookDao categoryBookDAO;
 
 	@Override
 	public void start(Promise<Void> startPromise) throws Exception {
@@ -76,7 +72,6 @@ public class HttpVerticle extends AbstractVerticle {
 		routerREST.delete("/books/:id").handler(this::deleteBookHandler);
 		
 		// Orders REST API
-		// TODO: create HANDLER methods 
 		routerREST.get("/orders").handler(this::getAllOrdersHandler);
 		routerREST.post("/orders").handler(this::createOrderHandler);
 		
@@ -102,11 +97,7 @@ public class HttpVerticle extends AbstractVerticle {
 		configuration = new DefaultConfiguration();
 		configuration.set(SQLDialect.POSTGRES);
 		
-		// instantiating DAOs
-		bookDAO = new BookDao(configuration, pgClient);
-		authorBookDAO = new AuthorBookDao(configuration, pgClient);
-		categoryBookDAO = new CategoryBookDao(configuration, pgClient);
-
+		
 		/* NOT: D connection is AUTOMATICALY CLOSED! More info at:
 		 * https://www.jooq.org/doc/3.11/manual/getting-started/tutorials/jooq-in-7-steps/jooq-in-7-steps-step5/ */
 		queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
@@ -200,15 +191,12 @@ public class HttpVerticle extends AbstractVerticle {
 		AuthorServiceImpl.getAuthorByIdJooq(queryExecutor, id).onComplete(ok(rc));
 	}
 	
-	// FIXME: fix handling of NON-EXISTING 'category_id' which has been sent in HTTP GET request!!!
 	private void getCategoryByIdHandler(RoutingContext rc) {
 		long id = Long.valueOf(rc.request().getParam("id"));
 		CategoryServiceImpl.getCategoryByIdJooq(queryExecutor, id).onComplete(ok(rc));
-	}
+	}	
 	
-	
-	private void getAllBooksHandlerJooq(RoutingContext rc) {
-//		BookJooqQueries.getAllBooksJooq(queryExecutor).onComplete(ok(rc));		
+	private void getAllBooksHandlerJooq(RoutingContext rc) {		
 		BookServiceImpl.getAllBooksJooq(queryExecutor).onComplete(ok(rc));
 	}
 	
@@ -260,14 +248,14 @@ public class HttpVerticle extends AbstractVerticle {
 		Category categoryPojo = new Category(rc.getBodyAsJson());
 		categoryPojo.setCategoryId(id);
 		LOGGER.info("(in updateCategoryHandler) categoryPojo.toString(): " + categoryPojo.toString());
-		CategoryServiceImpl.updateCategoryJooq(queryExecutor, categoryPojo, id).onComplete(noContent(rc));
+		CategoryServiceImpl.updateCategoryJooq(queryExecutor, categoryPojo).onComplete(noContent(rc));
 	}	
 	
 	private void updateBookHandler(RoutingContext rc) {
 		long id = (long) Integer.valueOf(rc.request().getParam("id"));
 		JsonObject bookJO = rc.getBodyAsJson();
 		bookJO.put("book_id", id);
-		BookServiceImpl.updateBookJooq(queryExecutor, bookJO, bookDAO, authorBookDAO, categoryBookDAO, id)
+		BookServiceImpl.updateBookJooq(queryExecutor, bookJO, id)
 		   .onComplete( (ok(rc)) );
 	}
 	

@@ -29,7 +29,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-
+// IMPORTANT: this class uses queryExecutor and DAO objects for querying and upsert operations, but NOT transactions!
 public class BookJooqQueries {	
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(BookJooqQueries.class);	
@@ -207,7 +207,7 @@ public class BookJooqQueries {
 				CategoryBook cb = new CategoryBook(catId, bookId);
 				bookCategories.add(cb);
 			}
-			// FIXME: make sure that NO EMPTY collection of CategoryBook has been INSERTED/DELETED!!!
+
 			if (!deleteCategoryIdsSet.isEmpty() && !toInsertCategoryIdsSet.isEmpty()) {			
 				return queryExecutor.execute(dsl -> dsl
 						.deleteFrom(CATEGORY_BOOK)
@@ -298,20 +298,4 @@ public class BookJooqQueries {
 		
 		return promise.future();
 	}
-	
-	/*
-	public void someMethod() {
-		DSLContext context;
-		Optional<Integer> result = Optional.of(context
-			.insertInto(
-				table("table"), field("f1"), field("f2"), field("f3"), field("f4"), field("f5"), 
-				field("f6"), field("f7"), field("f8"), field("f9")))
-			.map(statement -> {
-				for (Media media : mediaList) {
-					statement.values(media.f1(), media.f2);
-				}
-				return statement.execute();
-			});		
-	}	
-	*/
 }

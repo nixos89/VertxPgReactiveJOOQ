@@ -111,12 +111,8 @@ public class AuthorServiceImpl {
 
 	public static Future<Void> updateAuthorJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
 			Author authorPojo, long id) {
-		Promise<Void> promise = Promise.promise();								
-		LOGGER.info("id = " + id);
-		LOGGER.info("authorPojo.getFirstName() = " + authorPojo.getFirstName());
-		LOGGER.info("authorPojo.getLastName() = " + authorPojo.getLastName());
+		Promise<Void> promise = Promise.promise();												
 		
-		// FIXME: it returns null - don't know why :(
 		Future<Integer> retVal = queryExecutor.transaction(qe -> {				
 			return qe.execute(dsl -> dsl
 				.update(AUTHOR)
@@ -124,12 +120,10 @@ public class AuthorServiceImpl {
 				.set(AUTHOR.LAST_NAME, authorPojo.getLastName())
 				.where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(id)))				
 			);
-		});
-		
+		});		
 		retVal.onComplete(ar -> promise.handle(Future.succeededFuture()));
 		retVal.onFailure(handler -> promise.handle(Future.failedFuture(
-				new NoSuchElementException("Error, author has not been updated for id = " + id + "! Cause: " + handler))));
-		
+				new NoSuchElementException("Error, author has not been updated for id = " + id + "! Cause: " + handler))));		
 		return promise.future();
 	}
 	
