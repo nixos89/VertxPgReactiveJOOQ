@@ -44,14 +44,13 @@ public class AuthorServiceImpl {
 	public static Future<JsonObject> getAllAuthorsJooq(ReactiveClassicGenericQueryExecutor queryExecutor) {
 		Promise<JsonObject> finalRes = Promise.promise();					
 		Future<List<Row>> bookFuture = queryExecutor.transaction(qe -> {			
-			return qe.findManyRow(dsl -> dsl.select(AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME).from(AUTHOR));
-		});				
-		
+			return qe.findManyRow(dsl -> dsl.select(AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME)
+				.from(AUTHOR).orderBy(AUTHOR.AUTHOR_ID.asc()));
+		});						
 	    bookFuture.onComplete(handler -> {
 			if (handler.succeeded()) {								
 				List<Row> authorsLR = handler.result();				
 				JsonObject authorsJsonObject = extractAuthorsFromLR(authorsLR);
-				//LOGGER.info("bookJsonObject.encodePrettily(): " + booksJsonObject.encodePrettily());
 				finalRes.complete(authorsJsonObject);
 	    	} else {
 	    		LOGGER.error("Error, something failed in retrivening ALL authors! Cause: " 
@@ -59,18 +58,17 @@ public class AuthorServiceImpl {
 	    		queryExecutor.rollback();
 	    		finalRes.fail(handler.cause());
 	    	}
-	    }); 
-		
+	    }); 		
 		return finalRes.future();
 	}
 	
 	
-	public static Future<JsonObject> getAuthorByIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long authorId) {
+	public static Future<JsonObject> getAuthorByIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, Long authorId) {
 		Promise<JsonObject> finalRes = Promise.promise();					
 		Future<Row> bookFuture = queryExecutor.transaction(qe -> {			
 			return qe.findOneRow(dsl -> dsl
 				.select(AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME)
-				.from(AUTHOR).where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(authorId))));
+				.from(AUTHOR).where(AUTHOR.AUTHOR_ID.eq(authorId)));
 		});				
 		
 	    bookFuture.onComplete(handler -> {
@@ -109,8 +107,7 @@ public class AuthorServiceImpl {
 	}	
 	
 
-	public static Future<Void> updateAuthorJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
-			Author authorPojo, long id) {
+	public static Future<Void> updateAuthorJooq(ReactiveClassicGenericQueryExecutor queryExecutor, Author authorPojo) {
 		Promise<Void> promise = Promise.promise();												
 		
 		Future<Integer> retVal = queryExecutor.transaction(qe -> {				
@@ -118,12 +115,15 @@ public class AuthorServiceImpl {
 				.update(AUTHOR)
 				.set(AUTHOR.FIRST_NAME, authorPojo.getFirstName())
 				.set(AUTHOR.LAST_NAME, authorPojo.getLastName())
-				.where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(id)))				
+				.where(AUTHOR.AUTHOR_ID.eq(authorPojo.getAuthorId()))				
 			);
 		});		
 		retVal.onComplete(ar -> promise.handle(Future.succeededFuture()));
-		retVal.onFailure(handler -> promise.handle(Future.failedFuture(
-				new NoSuchElementException("Error, author has not been updated for id = " + id + "! Cause: " + handler))));		
+		retVal.onFailure(handler -> {
+			LOGGER.error("Error, something went wrong! Cause:\n" + handler.getStackTrace());
+			promise.handle(Future.failedFuture(new NoSuchElementException("Error, author has not been updated for id = "
+					+ authorPojo.getAuthorId() + "! Cause: " + handler)));
+		});		
 		return promise.future();
 	}
 	
@@ -134,8 +134,7 @@ public class AuthorServiceImpl {
 			return qe.execute(dsl -> dsl
 				.delete(AUTHOR)
 				.where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(id))));
-		});
-		
+		});		
 		deleteAuthorFuture.onComplete(ar -> {
 			if(ar.succeeded()) {
 				promise.handle(Future.succeededFuture());
@@ -143,8 +142,7 @@ public class AuthorServiceImpl {
 				queryExecutor.rollback();
 				promise.handle(Future.failedFuture(new NoSuchElementException("No author with id = " + id)));
 			}
-		});
-		
+		});		
 		return promise.future();
 	}
 	

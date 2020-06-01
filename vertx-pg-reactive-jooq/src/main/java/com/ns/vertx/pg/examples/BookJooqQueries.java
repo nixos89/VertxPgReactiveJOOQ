@@ -20,7 +20,6 @@ import com.ns.vertx.pg.jooq.tables.daos.CategoryBookDao;
 import com.ns.vertx.pg.jooq.tables.pojos.AuthorBook;
 import com.ns.vertx.pg.jooq.tables.pojos.Book;
 import com.ns.vertx.pg.jooq.tables.pojos.CategoryBook;
-import com.ns.vertx.pg.service.DBQueries;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
@@ -61,7 +60,7 @@ public class BookJooqQueries {
 		/* NOTE: might want to check into https://www.jooq.org/doc/3.11/manual/sql-building/bind-values/sql-injection/
 		 *   ...to use dsl.fetch(SQL_QUERY, bindingParam) instead of dls.resultQuery */
 		Future<QueryResult> bookFuture = queryExecutor.query(dsl -> dsl
-		    	.resultQuery(DBQueries.GET_BOOK_BY_BOOK_ID, Long.valueOf(book_id)));
+		    	.resultQuery(DBQueries_forDAO.GET_BOOK_BY_BOOK_ID, Long.valueOf(book_id)));
 	    
 	    bookFuture.onComplete(handler -> {
 			if (handler.succeeded()) {
@@ -89,7 +88,7 @@ public class BookJooqQueries {
 	
 	static Future<JsonObject> getAllBooksJooq(ReactiveClassicGenericQueryExecutor queryExecutor) {
 		Promise<JsonObject> finalRes = Promise.promise();					
-		Future<QueryResult> bookFuture = queryExecutor.query(dsl -> dsl.resultQuery(DBQueries.GET_ALL_BOOKS));	    
+		Future<QueryResult> bookFuture = queryExecutor.query(dsl -> dsl.resultQuery(DBQueries_forDAO.GET_ALL_BOOKS));	    
 	    bookFuture.onComplete(handler -> {
 			if (handler.succeeded()) {								
 				QueryResult booksQR = handler.result();				

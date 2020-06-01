@@ -79,12 +79,12 @@ public interface IUsers extends VertxPojo, Serializable {
     /**
      * Setter for <code>public.users.role_id</code>.
      */
-    public IUsers setRoleId(Integer value);
+    public IUsers setRoleId(Long value);
 
     /**
      * Getter for <code>public.users.role_id</code>.
      */
-    public Integer getRoleId();
+    public Long getRoleId();
 
     // -------------------------------------------------------------------------
     // FROM and INTO
@@ -133,9 +133,9 @@ public interface IUsers extends VertxPojo, Serializable {
             throw new UnexpectedJsonValueType("password","java.lang.String",e);
         }
         try {
-            setRoleId(json.getInteger("role_id"));
+            setRoleId(json.getLong("role_id"));
         } catch (java.lang.ClassCastException e) {
-            throw new UnexpectedJsonValueType("role_id","java.lang.Integer",e);
+            throw new UnexpectedJsonValueType("role_id","java.lang.Long",e);
         }
         return this;
     }

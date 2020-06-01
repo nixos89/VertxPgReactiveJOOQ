@@ -212,12 +212,11 @@
 						<password>postgres</password>
 					</jdbc>
 
-
 					<!-- Adding new generator for being able to access JavaGenerator class -->
-<!-- 					<generator> -->
-<!-- 						TODO: include plain jOOQ Code generator in order to be able to extend JavaGenerator class -->
-<!-- 						<name>org.jooq.codegen.JavaGenerator</name> -->
-<!-- 					</generator> -->
+					<generator>
+					<!-- TODO: include plain jOOQ Code generator in order to be able to extend JavaGenerator class -->
+						<name>org.jooq.codegen.JavaGenerator</name>
+					</generator>
 
 					<!-- Generator parameters -->
 					<generator>
@@ -281,10 +280,7 @@
 							<name>io.github.jklingsporn.vertx.jooq.generate.VertxGeneratorStrategy</name>
 						</strategy>
 					</generator>
-					
-					
-					
-					
+									
 				</configuration>
 			</plugin>
 			<!-- Plug-in for "VertX-JOOQ-Classic-Reactive"::END -->

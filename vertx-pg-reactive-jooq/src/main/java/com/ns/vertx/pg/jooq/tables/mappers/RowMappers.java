@@ -74,7 +74,7 @@ public class RowMappers {
             pojo.setOrderId(row.getLong("order_id"));
             pojo.setTotal(row.getDouble("total"));
             pojo.setOrderDate(row.getLocalDateTime("order_date"));
-            pojo.setUserId(row.getInteger("user_id"));
+            pojo.setUserId(row.getLong("user_id"));
             return pojo;
         };
     }
@@ -97,7 +97,7 @@ public class RowMappers {
             pojo.setEmail(row.getString("email"));
             pojo.setUsername(row.getString("username"));
             pojo.setPassword(row.getString("password"));
-            pojo.setRoleId(row.getInteger("role_id"));
+            pojo.setRoleId(row.getLong("role_id"));
             return pojo;
         };
     }

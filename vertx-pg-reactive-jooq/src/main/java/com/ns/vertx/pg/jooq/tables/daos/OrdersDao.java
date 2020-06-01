@@ -54,7 +54,7 @@ public class OrdersDao extends AbstractReactiveVertxDAO<OrdersRecord, com.ns.ver
     /**
      * Find records that have <code>user_id IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Orders>> findManyByUserId(Collection<Integer> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Orders>> findManyByUserId(Collection<Long> values) {
         return findManyByCondition(Orders.ORDERS.USER_ID.in(values));
     }
 

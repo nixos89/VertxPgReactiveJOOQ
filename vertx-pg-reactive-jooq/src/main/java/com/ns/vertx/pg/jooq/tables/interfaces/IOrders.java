@@ -50,12 +50,12 @@ public interface IOrders extends VertxPojo, Serializable {
     /**
      * Setter for <code>public.orders.user_id</code>.
      */
-    public IOrders setUserId(Integer value);
+    public IOrders setUserId(Long value);
 
     /**
      * Getter for <code>public.orders.user_id</code>.
      */
-    public Integer getUserId();
+    public Long getUserId();
 
     // -------------------------------------------------------------------------
     // FROM and INTO
@@ -89,9 +89,9 @@ public interface IOrders extends VertxPojo, Serializable {
             throw new UnexpectedJsonValueType("order_date","java.time.LocalDateTime",e);
         }
         try {
-            setUserId(json.getInteger("user_id"));
+            setUserId(json.getLong("user_id"));
         } catch (java.lang.ClassCastException e) {
-            throw new UnexpectedJsonValueType("user_id","java.lang.Integer",e);
+            throw new UnexpectedJsonValueType("user_id","java.lang.Long",e);
         }
         return this;
     }

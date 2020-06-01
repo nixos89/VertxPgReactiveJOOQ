@@ -34,8 +34,7 @@ public class BookServiceImpl {
 		Promise<JsonObject> finalRes = Promise.promise();					
 		Future<QueryResult> bookFuture = queryExecutor.transaction(qe -> {			
 			return qe.query(dsl -> dsl.resultQuery(DBQueries.GET_ALL_BOOKS));
-		});				
-		
+		});						
 	    bookFuture.onComplete(handler -> {
 			if (handler.succeeded()) {								
 				QueryResult booksQR = handler.result();				
@@ -45,14 +44,13 @@ public class BookServiceImpl {
 	    		LOGGER.error("Error, something failed in retrivening ALL books! Cause: " 
 	    				+ handler.cause().getMessage());
 	    		queryExecutor.rollback();
-	    		finalRes.fail(handler.cause());
+	    		finalRes.fail(new NoSuchElementException("There are no saved books in database!"));
 	    	}
 	    }); 
 		
 		return finalRes.future();
 	}
-	
-	// *********************************************************************************************************************************	
+		
 
 	public static Future<JsonObject> getAllBooksByAuthorIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long authorId) {
 		Promise<JsonObject> finalRes = Promise.promise();					
@@ -73,8 +71,7 @@ public class BookServiceImpl {
 				.where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(authorId)))
 				.groupBy(BOOK.BOOK_ID).orderBy(BOOK.BOOK_ID.asc())
 			);
-		});						
-		
+		});								
 	    bookFuture.onComplete(handler -> {
 			if (handler.succeeded()) {								
 				List<Row> booksLR = handler.result();				
@@ -87,12 +84,10 @@ public class BookServiceImpl {
 	    		queryExecutor.rollback();
 	    		finalRes.fail(handler.cause());
 	    	}
-	    }); 
-		
+	    }); 		
 		return finalRes.future();
 	}
 	
-	// *********************************************************************************************************************************
 	
 	public static Future<JsonObject> getAllBooksByAuthorIdJooqMix(ReactiveClassicGenericQueryExecutor queryExecutor, long authorId) {
 		Promise<JsonObject> finalRes = Promise.promise();
@@ -112,12 +107,10 @@ public class BookServiceImpl {
 	    		queryExecutor.rollback();
 	    		finalRes.fail(handler.cause());
 	    	}
-	    }); 
-		
+	    }); 		
 		return finalRes.future();
 	}
 	
-	// *********************************************************************************************************************************
 		
 	public static Future<JsonObject> getBookByIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long bookId) {
 		Promise<JsonObject> finalRes = Promise.promise();
@@ -129,13 +122,15 @@ public class BookServiceImpl {
 			if (handler.succeeded()) {									
 				QueryResult booksQR = handler.result();				
 				if (booksQR != null) {
-					JsonObject bookJsonObject = BookUtilHelper.fillBook(booksQR);				
-					finalRes.complete(bookJsonObject);
+					JsonObject bookJsonObject = BookUtilHelper.fillBook(booksQR);
+					if (bookJsonObject == null) {
+						finalRes.fail(new NoSuchElementException("Error, no book has been found in DB for book_id = " + bookId));
+					}  else {
+						finalRes.complete(bookJsonObject);	
+					}					
 				} else {				
-					JsonObject resp = new JsonObject().put("message", "Book with id " + bookId + " does NOT exist in DB!");
-					finalRes.complete(resp);
-				}
-				
+					finalRes.complete(new JsonObject().put("message", "Book with id " + bookId + " does NOT exist in DB!"));
+				}				
 	    	} else {
 	    		LOGGER.error("Error, something failed in retrivening query by book_id = " + bookId);
 	    		queryExecutor.rollback();
@@ -145,7 +140,6 @@ public class BookServiceImpl {
 		return finalRes.future();
 	}
 	
-	// **************************************************************************************************************************	
 	
 	public static Future<Void> createBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, JsonObject bookJO) {
 		Promise<Void> promise = Promise.promise();			
@@ -157,7 +151,7 @@ public class BookServiceImpl {
 				.values(bookPojo.getTitle(), bookPojo.getAmount(), bookPojo.getPrice(), bookPojo.getIsDeleted())
 				.returningResult(BOOK.BOOK_ID, BOOK.TITLE, BOOK.AMOUNT, BOOK.PRICE, BOOK.IS_DELETED)
 			).compose(insertedBook -> { 				
-				JsonObject resultJO =  BookUtilHelper.extractBookFromRS(insertedBook);
+				JsonObject resultJO =  BookUtilHelper.extractSingleBookFromRS(insertedBook);
 				final Long bookId = resultJO.getLong("book_id");
 				LOGGER.info("saved book:\n" + resultJO.encodePrettily());
 				
@@ -197,8 +191,7 @@ public class BookServiceImpl {
 		});
 		return promise.future();
 	}		
-	
-	// *********************************************************************************************************************************	
+		
 
 	public static Future<JsonObject> updateBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, JsonObject bookJO, long bookId) {				
 		Promise<JsonObject> promise = Promise.promise();				 
@@ -206,9 +199,7 @@ public class BookServiceImpl {
 				.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());	
 		
 		Set<Long> categoryUpdatedIds = bookJO.getJsonArray("categories").stream()
-				.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());
-		
-		LOGGER.info("categoryUpdatedIds:"); categoryUpdatedIds.stream().forEach(System.out::println);
+				.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());		
 		
 		Future<Void> iterateCBFuture = iterateCategoryBook(queryExecutor, categoryUpdatedIds, bookId);
 		Future<Void> iterateABFuture = iterateAuthorBook(queryExecutor, authorUpdatedIds, bookId);		
@@ -285,7 +276,6 @@ public class BookServiceImpl {
 		return promise.future();
 	}	
 	
-	// ***************************************************************************************************************
 
 	private static Future<Void> iterateAuthorBook(ReactiveClassicGenericQueryExecutor queryExecutor, Set<Long> authorUpdatedIds, long bookId) {
 		Promise<Void> promise = Promise.promise();				

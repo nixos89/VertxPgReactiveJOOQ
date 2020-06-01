@@ -1,9 +1,6 @@
 package com.ns.vertx.pg.examples;
 
 import static com.ns.vertx.pg.examples.ActionHelper.ok;
-import static com.ns.vertx.pg.service.DBQueries.CREATE_CATEGORY_TABLE_SQL;
-import static com.ns.vertx.pg.service.DBQueries.GET_ALL_CATEGORIES_SQL;
-import static com.ns.vertx.pg.service.DBQueries.GET_CATEGORY_BY_ID_SQL;
 
 import org.jooq.Configuration;
 import org.jooq.SQLDialect;
@@ -187,7 +184,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 			if (ar1.succeeded()) {
 				LOGGER.info("Connected!");
 				SqlConnection conn = ar1.result();
-				conn.prepare(CREATE_CATEGORY_TABLE_SQL, rs -> {
+				conn.prepare(DBQueries_forDAO.CREATE_CATEGORY_TABLE_SQL, rs -> {
 					if (rs.succeeded()) {
 						
 						promise.handle(rs.map(conn));
@@ -226,7 +223,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 			if (ar.succeeded()) {
 				SqlConnection sqlConnection = ar.result();
 //				Transaction tx = sqlConnection.begin();
-				sqlConnection.prepare(GET_ALL_CATEGORIES_SQL, fetch -> {
+				sqlConnection.prepare(DBQueries_forDAO.GET_ALL_CATEGORIES_SQL, fetch -> {
 					if (fetch.succeeded()) {
 						PreparedStatement ps = fetch.result();
 						ps.query().execute(handler -> {
@@ -251,7 +248,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 			if (ar.succeeded()) {
 				SqlConnection conn = ar.result();
 				int id = Integer.valueOf(rc.request().getParam("id"));
-				conn.preparedQuery(GET_CATEGORY_BY_ID_SQL).execute(Tuple.of(id), arCID -> {
+				conn.preparedQuery(DBQueries_forDAO.GET_CATEGORY_BY_ID_SQL).execute(Tuple.of(id), arCID -> {
 					JsonObject responseJO = new JsonObject();
 					if (arCID.succeeded()) {
 						RowIterator<Row> ri = arCID.result().iterator();

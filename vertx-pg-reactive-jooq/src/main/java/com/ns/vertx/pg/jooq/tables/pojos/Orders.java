@@ -17,12 +17,12 @@ import java.time.LocalDateTime;
 @SuppressWarnings({ "all", "unchecked", "rawtypes" })
 public class Orders implements VertxPojo, IOrders {
 
-    private static final long serialVersionUID = -1868434546;
+    private static final long serialVersionUID = 1119610166;
 
     private Long          orderId;
     private Double        total;
     private LocalDateTime orderDate;
-    private Integer       userId;
+    private Long          userId;
 
     public Orders() {}
 
@@ -37,7 +37,7 @@ public class Orders implements VertxPojo, IOrders {
         Long          orderId,
         Double        total,
         LocalDateTime orderDate,
-        Integer       userId
+        Long          userId
     ) {
         this.orderId = orderId;
         this.total = total;
@@ -79,12 +79,12 @@ public class Orders implements VertxPojo, IOrders {
     }
 
     @Override
-    public Integer getUserId() {
+    public Long getUserId() {
         return this.userId;
     }
 
     @Override
-    public Orders setUserId(Integer userId) {
+    public Orders setUserId(Long userId) {
         this.userId = userId;
         return this;
     }

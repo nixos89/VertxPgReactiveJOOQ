@@ -74,7 +74,7 @@ public class UsersDao extends AbstractReactiveVertxDAO<UsersRecord, com.ns.vertx
     /**
      * Find records that have <code>role_id IN (values)</code> asynchronously
      */
-    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByRoleId(Collection<Integer> values) {
+    public Future<List<com.ns.vertx.pg.jooq.tables.pojos.Users>> findManyByRoleId(Collection<Long> values) {
         return findManyByCondition(Users.USERS.ROLE_ID.in(values));
     }
 

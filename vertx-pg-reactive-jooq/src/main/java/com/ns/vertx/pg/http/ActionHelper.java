@@ -1,5 +1,6 @@
 package com.ns.vertx.pg.http;
 
+import java.io.IOException;
 import java.util.NoSuchElementException;
 
 import io.vertx.core.AsyncResult;
@@ -19,6 +20,8 @@ public class ActionHelper {
 			if (ar.failed()) {
 				if (ar.cause() instanceof NoSuchElementException) {
 					context.response().setStatusCode(404).end(ar.cause().getMessage());
+				} else if(ar.cause() instanceof IOException) {
+					context.response().setStatusCode(400).end(ar.cause().getMessage());
 				} else {
 					context.fail(ar.cause());
 				}

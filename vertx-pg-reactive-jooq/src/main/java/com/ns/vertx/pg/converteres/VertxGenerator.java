@@ -4,9 +4,9 @@ package com.ns.vertx.pg.converteres;
 // NOTE: added for conversion of Timestamp to LocalDateTime
 public class VertxGenerator /* extends JavaGenerator */{
 // https://github.com/jklingsporn/vertx-jooq/blob/f742231872ecd300962e4c730ef62c596beef975/vertx-jooq-generate/src/main/java/io/github/jklingsporn/vertx/jooq/generate/VertxGenerator.java#L33
-	
-	
+		
 //	JavaGenerator javaGenerator;
+	
 	
 //	   private static final JooqLogger logger = JooqLogger.getLogger(VertxGenerator.class);
 //

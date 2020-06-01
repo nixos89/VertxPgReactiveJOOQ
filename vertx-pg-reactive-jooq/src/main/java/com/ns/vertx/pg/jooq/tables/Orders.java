@@ -33,7 +33,7 @@ import org.jooq.impl.TableImpl;
 @SuppressWarnings({ "all", "unchecked", "rawtypes" })
 public class Orders extends TableImpl<OrdersRecord> {
 
-    private static final long serialVersionUID = -1630278714;
+    private static final long serialVersionUID = 640870055;
 
     /**
      * The reference instance of <code>public.orders</code>
@@ -66,7 +66,7 @@ public class Orders extends TableImpl<OrdersRecord> {
     /**
      * The column <code>public.orders.user_id</code>.
      */
-    public final TableField<OrdersRecord, Integer> USER_ID = createField(DSL.name("user_id"), org.jooq.impl.SQLDataType.INTEGER, this, "");
+    public final TableField<OrdersRecord, Long> USER_ID = createField(DSL.name("user_id"), org.jooq.impl.SQLDataType.BIGINT, this, "");
 
     /**
      * Create a <code>public.orders</code> table reference
@@ -161,7 +161,7 @@ public class Orders extends TableImpl<OrdersRecord> {
     // -------------------------------------------------------------------------
 
     @Override
-    public Row4<Long, Double, LocalDateTime, Integer> fieldsRow() {
+    public Row4<Long, Double, LocalDateTime, Long> fieldsRow() {
         return (Row4) super.fieldsRow();
     }
 }

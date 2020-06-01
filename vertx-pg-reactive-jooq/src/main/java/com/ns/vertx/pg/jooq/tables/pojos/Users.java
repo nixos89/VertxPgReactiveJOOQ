@@ -15,15 +15,15 @@ import io.github.jklingsporn.vertx.jooq.shared.internal.VertxPojo;
 @SuppressWarnings({ "all", "unchecked", "rawtypes" })
 public class Users implements VertxPojo, IUsers {
 
-    private static final long serialVersionUID = -1797501662;
+    private static final long serialVersionUID = 1482506732;
 
-    private Long    userId;
-    private String  firstName;
-    private String  lastName;
-    private String  email;
-    private String  username;
-    private String  password;
-    private Integer roleId;
+    private Long   userId;
+    private String firstName;
+    private String lastName;
+    private String email;
+    private String username;
+    private String password;
+    private Long   roleId;
 
     public Users() {}
 
@@ -38,13 +38,13 @@ public class Users implements VertxPojo, IUsers {
     }
 
     public Users(
-        Long    userId,
-        String  firstName,
-        String  lastName,
-        String  email,
-        String  username,
-        String  password,
-        Integer roleId
+        Long   userId,
+        String firstName,
+        String lastName,
+        String email,
+        String username,
+        String password,
+        Long   roleId
     ) {
         this.userId = userId;
         this.firstName = firstName;
@@ -122,12 +122,12 @@ public class Users implements VertxPojo, IUsers {
     }
 
     @Override
-    public Integer getRoleId() {
+    public Long getRoleId() {
         return this.roleId;
     }
 
     @Override
-    public Users setRoleId(Integer roleId) {
+    public Users setRoleId(Long roleId) {
         this.roleId = roleId;
         return this;
     }
