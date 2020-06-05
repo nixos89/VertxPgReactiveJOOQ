@@ -6,13 +6,14 @@ import static com.ns.vertx.pg.jooq.tables.Book.BOOK;
 import static com.ns.vertx.pg.jooq.tables.Category.CATEGORY;
 import static com.ns.vertx.pg.jooq.tables.CategoryBook.CATEGORY_BOOK;
 
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.jooq.CommonTableExpression;
 import org.jooq.Record2;
+import org.jooq.impl.DSL;
+import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +24,7 @@ import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
-import io.vertx.sqlclient.Row;
+
 
 
 public class BookServiceImpl {
@@ -53,29 +54,84 @@ public class BookServiceImpl {
 		
 
 	public static Future<JsonObject> getAllBooksByAuthorIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long authorId) {
-		Promise<JsonObject> finalRes = Promise.promise();					
-		Future<List<Row>> bookFuture = queryExecutor.transaction(qe -> {			
-			return qe.findManyRow(dsl -> dsl
-				/* TODO: must use DISTINCT for AUTHORS and CATEGORIES to be able to return ALL of them in 1 ROW!!! 
-				 *   For now it's all being SINGLE row e.g.: 
-				 *   bookID=1, category=8
-				 *   bookID=1, category=9 */
-				.select(BOOK.BOOK_ID, BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED, 
-						AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME, 
-						CATEGORY.CATEGORY_ID, CATEGORY.NAME, CATEGORY.IS_DELETED)
-				.from(BOOK
+		Promise<JsonObject> finalRes = Promise.promise();				
+		
+//		Future<List<Row>> bookFuture = queryExecutor.transaction(qe -> {			
+//			return qe.findManyRow(dsl -> dsl
+//				/* TODO: must use DISTINCT for AUTHORS and CATEGORIES to be able to return ALL of them in 1 ROW!!! 
+//				 *   For now it's all being SINGLE row e.g.: 
+//				 *   bookID=1, category=8
+//				 *   bookID=1, category=9 */
+//				.select(BOOK.BOOK_ID, BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED, 
+//						DSL.val(DSL.jsonArray(DSL.arrayAggDistinct(AUTHOR.AUTHOR_ID), 
+//								DSL.arrayAggDistinct(AUTHOR.FIRST_NAME),
+//								DSL.arrayAggDistinct(AUTHOR.LAST_NAME))
+//						).cast(SQLDataType.JSON),					
+//						DSL.val(DSL.jsonArray(DSL.arrayAggDistinct(CATEGORY.CATEGORY_ID), 
+//								DSL.arrayAggDistinct(CATEGORY.NAME), 
+//								DSL.arrayAggDistinct(CATEGORY.IS_DELETED))
+//						).cast(SQLDataType.JSON)
+//				).from(BOOK
+//					.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
+//					.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
+//					.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
+//					.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
+//				).where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(authorId))
+//				).groupBy(BOOK.BOOK_ID).orderBy(BOOK.BOOK_ID.asc())
+//			);
+//		});			
+		
+//		Future<QueryResult> bookFuture = queryExecutor.transaction(qe -> {			
+//			return qe.query(dsl -> dsl
+//				/* TODO: must use DISTINCT for AUTHORS and CATEGORIES to be able to return ALL of them in 1 ROW!!! 
+//				 *   For now it's all being SINGLE row e.g.: 
+//				 *   bookID=1, category=8
+//				 *   bookID=1, category=9 */
+//				.select(BOOK.BOOK_ID.as("b_id"), BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED, 
+//						DSL.jsonArray(AUTHOR.AUTHOR_ID, 
+//								AUTHOR.FIRST_NAME,
+//								AUTHOR.LAST_NAME).as("authors"),
+//											
+//						DSL.jsonArray(DSL.arrayAggDistinct(CATEGORY.CATEGORY_ID), 
+//								DSL.arrayAggDistinct(CATEGORY.NAME), 
+//								DSL.arrayAggDistinct(CATEGORY.IS_DELETED)).as("categories")
+//				).from(BOOK
+//					.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
+//					.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
+//					.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
+//					.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
+//				).where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(authorId))
+//				).groupBy(BOOK.BOOK_ID, AUTHOR.AUTHOR_ID).orderBy(BOOK.BOOK_ID.asc())
+//			);
+//		});		
+		
+		
+		Future<QueryResult> bookFuture = queryExecutor.transaction(qe -> {			
+			return qe.query(dsl -> dsl
+				.select(BOOK.BOOK_ID.as("b_id"), BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED, 
+						DSL.jsonArray(DSL.arrayAggDistinct(AUTHOR.AUTHOR_ID)).as("authors"),
+											
+						DSL.val(DSL.jsonArray(DSL.arrayAggDistinct(CATEGORY.CATEGORY_ID), 
+								DSL.arrayAggDistinct(CATEGORY.NAME), 
+								DSL.arrayAggDistinct(CATEGORY.IS_DELETED))).as("categories").cast(SQLDataType.JSON)
+				).from(BOOK
 					.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
 					.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
 					.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
-					.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID)))
-				.where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(authorId)))
-				.groupBy(BOOK.BOOK_ID).orderBy(BOOK.BOOK_ID.asc())
+					.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
+				).where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(authorId))
+				).groupBy(BOOK.BOOK_ID, AUTHOR.AUTHOR_ID).orderBy(BOOK.BOOK_ID.asc())
 			);
-		});								
+		});	
+		
+		
+		
 	    bookFuture.onComplete(handler -> {
 			if (handler.succeeded()) {								
-				List<Row> booksLR = handler.result();				
-				JsonObject booksJsonObject = BookUtilHelper.extractBooksFromLR(booksLR);
+//				List<Row> booksLR = handler.result();
+				QueryResult booksQR = handler.result();
+//				JsonObject booksJsonObject = BookUtilHelper.extractBooksFromLR(booksLR);
+				JsonObject booksJsonObject = BookUtilHelper.extractBooksFromQR(booksQR);
 				LOGGER.info("bookJsonObject.encodePrettily(): " + booksJsonObject.encodePrettily());
 				finalRes.complete(booksJsonObject);
 	    	} else {

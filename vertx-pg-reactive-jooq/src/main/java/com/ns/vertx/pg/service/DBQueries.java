@@ -41,9 +41,8 @@ public class DBQueries {
             "GROUP BY b_id ORDER BY b_id ASC;";	
 	
 	
-	static String GET_ALL_ORDERS = "SELECT o.order_id, o.order_date, o.total, users.*, oi.*, "+ 
-			"to_json(array_agg(DISTINCT aut.*)) as authors, to_json(array_agg(DISTINCT cat.*)) as categories," +
-			"b.* " +
+	static String GET_ALL_ORDERS = "SELECT oi.order_item AS oi_id, oi.amount AS o_amount o.order_id, o.order_date, o.total, users.user_id, users.username, " + 
+			"b.*, to_json(array_agg(DISTINCT aut.*)) as authors, to_json(array_agg(DISTINCT cat.*)) as categories," +
 			"FROM orders AS o " + 
 			"LEFT JOIN order_item AS oi ON o.order_id = oi.order_id " + 
 			"LEFT JOIN users ON o.user_id = users.user_id " + 
@@ -52,6 +51,6 @@ public class DBQueries {
             "LEFT JOIN author AS aut ON ab.author_id = aut.author_id " +
             "LEFT JOIN category_book AS cb ON b.book_id = cb.book_id " +
             "LEFT JOIN category AS cat ON cb.category_id = cat.category_id " +
-            "GROUP BY o.order_id, users.user_id, oi.order_item_id, b.book_id, aut.author_id, cat.category_id " +
+            "GROUP BY o.order_id, oi.order_item_id, users.user_id, b.book_id, aut.author_id, cat.category_id " +
             "ORDER BY o.order_id ASC";		
 }

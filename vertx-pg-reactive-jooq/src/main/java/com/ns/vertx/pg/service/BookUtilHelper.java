@@ -12,7 +12,6 @@ import java.util.Set;
 
 import org.jooq.CommonTableExpression;
 import org.jooq.DSLContext;
-import org.jooq.Field;
 import org.jooq.Record2;
 import org.jooq.Row2;
 import org.jooq.Table;
@@ -56,23 +55,19 @@ public class BookUtilHelper {
 		return new JsonObject().put("books", booksJA);
 	}
 
-	static JsonObject extractBooksFromLR(List<Row> booksLR){		
-		JsonObject bookJO = new JsonObject();
-		JsonObject categoryJO = new JsonObject();
-		JsonObject authorJO = new JsonObject();
+	static JsonObject extractBooksFromLR(List<Row> booksLR){				
 		JsonArray booksJA = new JsonArray();		
 		for (Row row : booksLR) {
+			LOGGER.info("row.getLong(\"book_id\") : " + row.getLong("book_id"));
+			JsonObject bookJO = new JsonObject();
 			bookJO.put("book_id", row.getLong("book_id"));
 			bookJO.put("title", row.getString("title"));
 			bookJO.put("amount", row.getInteger("amount"));
 			bookJO.put("price", row.getDouble("price"));
 			bookJO.put("is_deleted", row.getBoolean("is_deleted"));
-			categoryJO.put("category_id", row.getLong("category_id"));
-			categoryJO.put("name", row.getString("name"));
-			categoryJO.put("is_deleted", row.getString("is_deleted"));
-			
+			bookJO.put("authors", row.getBufferArray("authors"));
+			bookJO.put("categories", row.getBufferArray("categories"));
 			booksJA.add(bookJO);
-			bookJO.clear();
 		}
 		JsonObject joBooks= new JsonObject().put("books", booksJA);		
 		return joBooks;

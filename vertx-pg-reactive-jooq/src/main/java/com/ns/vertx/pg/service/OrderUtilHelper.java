@@ -1,15 +1,11 @@
 package com.ns.vertx.pg.service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.jooq.CommonTableExpression;
-import org.jooq.DSLContext;
-import org.jooq.Record4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -122,28 +118,14 @@ public class OrderUtilHelper {
 	}
 		
 	// **************************************************************************************************
-	// ********************** CTEs for performing INSERTION of Order(Item)s *****************************
+	// ********************* Helper methods for extracting info from GetAllOrderS ***********************
 	// **************************************************************************************************	
-	static CommonTableExpression<Record4<Long, Double, LocalDateTime, Long>> orders_table(DSLContext dsl, 
-			Long orderId, Double totalPrice, LocalDateTime orderDate, Long userId){		
-		// TODO: implement orders_table CTE method
-		
-		return null;
-	}
-	
-	static CommonTableExpression<Record4<Long, Integer, Long, Long>> orderItems_table(DSLContext dsl, 
-			Long orderItemId, Integer amount, Long bookId, Long orderId){		
-		// TODO: implement orderItems_table CTE method
-		
-		return null;
-	}
-	
 	
 	static JsonObject fillOrderQR(QueryResult ordersQR) {
 		JsonObject orderJO = new JsonObject();
 		JsonArray orderItemsJA = new JsonArray();
-		JsonArray authorsJA = ordersQR.get("authors", JsonArray.class);
-		JsonArray categoryJA = ordersQR.get("categories", JsonArray.class);
+//		JsonArray authorsJA = ordersQR.get("authors", JsonArray.class);
+//		JsonArray categoryJA = ordersQR.get("categories", JsonArray.class);
 		
 		Long orderItemId = ordersQR.get("order_item_id", Long.class);		
 		Long orderItemIdNew = null;
@@ -183,8 +165,7 @@ public class OrderUtilHelper {
 		return new JsonObject().put("orders", ordersJA);
 	}
 	
-	
-	
+		
 	static JsonObject fillOrderItemFromQR(QueryResult ordersQR) {
 		JsonObject orderItemJO = new JsonObject();
 		JsonArray orderItemsJA = new JsonArray();				
@@ -214,6 +195,7 @@ public class OrderUtilHelper {
 		return orderItemJO;				
 	}
 	
+	// used for OrderServiceImpl.getAllOrdersJooq2(..) method
 	static JsonObject extractOrderItemsFromQR(QueryResult queryResult) {
 		JsonArray orderItemsJA = new JsonArray();
 		if (queryResult == null) {
@@ -222,7 +204,6 @@ public class OrderUtilHelper {
 		LOGGER.info("+++++++++++++++++++++++++++++++++++++++++++++++++++++");
 		LOGGER.info("queryResult = " + queryResult);
 		LOGGER.info("+++++++++++++++++++++++++++++++++++++++++++++++++++++");
-		// FIXME: 001-extract values DIRECTLY from `queryResult` variable 
 		for (QueryResult qr : queryResult.asList()) {
 			JsonObject orderItem = fillOrderItemFromQR(qr);
 			orderItemsJA.add(orderItem);
@@ -246,6 +227,45 @@ public class OrderUtilHelper {
 		}
 		JsonObject ordersJO = new JsonObject().put("orders", ordersJA);		
 		return ordersJO;
+	}
+	
+	
+	// used for OrderServiceImpl.getAllOrdersJooq2(..) method
+	static JsonObject extractOrderItemsFromQR2(QueryResult queryResult) {
+		JsonObject ordersJOFinal = new JsonObject();
+		if (queryResult == null) {
+			return null;
+		}
+		LOGGER.info("+++++++++++++++++++++++++++++++++++++++++++++++++++++");
+		LOGGER.info("queryResult = " + queryResult);
+		LOGGER.info("+++++++++++++++++++++++++++++++++++++++++++++++++++++"); 
+		for (QueryResult ordersQR : queryResult.asList()) {
+			JsonObject orderItemJO = new JsonObject();
+			JsonArray orderItemsJA = new JsonArray();				
+			Long orderItemId = ordersQR.get("order_item_id", Long.class);		
+			Long orderItemIdNew = null;
+			
+			JsonObject bookJO = new JsonObject()
+				.put("book_id", ordersQR.get("book_id", Long.class))
+				.put("title", ordersQR.get("title", String.class))
+				.put("price", ordersQR.get("price", Double.class))
+				.put("deleted", ordersQR.get("is_deleted", Boolean.class))
+				.put("authors", ordersQR.get("authors", JsonArray.class))
+				.put("categories", ordersQR.get("categories", JsonArray.class));
+				
+			if (orderItemId != orderItemIdNew) {
+				orderItemsJA.add(bookJO);
+				orderItemIdNew = orderItemId;
+			}
+			
+			orderItemJO
+				.put("order_id", ordersQR.get("order_id", Long.class))
+				.put("order_date", ordersQR.get("order_date", String.class))
+				.put("total_price", ordersQR.get("total", Double.class))
+				.put("username", ordersQR.get("username", String.class))
+				.put("order_items", orderItemsJA);
+		}
+		return ordersJOFinal;
 	}
 	
 	

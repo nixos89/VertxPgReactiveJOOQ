@@ -95,6 +95,7 @@ public class HttpVerticle extends AbstractVerticle {
 		queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
 		// no other DB-Configuration necessary because jOOQ is only used to render our statements - not for execution		
 		
+		LOGGER.info("Whole setUp in in start() went well...");
 		createHttpServer(routerAPI).onComplete(startPromise);	
 	}// start::END
 
@@ -131,7 +132,7 @@ public class HttpVerticle extends AbstractVerticle {
 	
 	private void getAllBooksByAuthorIdHandler(RoutingContext rc) {
 		Long authorId = Long.valueOf(rc.request().getParam("id"));
-		BookServiceImpl.getAllBooksByAuthorIdJooqMix(queryExecutor, authorId).onComplete(ok(rc));
+		BookServiceImpl.getAllBooksByAuthorIdJooq(queryExecutor, authorId).onComplete(ok(rc));
 	}
 	
 
@@ -156,8 +157,7 @@ public class HttpVerticle extends AbstractVerticle {
 	
 	
 	private void createBookHandler(RoutingContext rc) {
-		JsonObject bookJO = rc.getBodyAsJson();		
-		LOGGER.info("In 'createBookHandler(..)' bookJO =\n" + bookJO.encodePrettily());		
+		JsonObject bookJO = rc.getBodyAsJson();						
 		BookServiceImpl.createBookJooq(queryExecutor, bookJO).onComplete(created(rc));
 	}
 
@@ -165,7 +165,6 @@ public class HttpVerticle extends AbstractVerticle {
 		Long id =  Long.valueOf(rc.request().getParam("id"));
 		Author authorPojo = new Author(rc.getBodyAsJson());
 		authorPojo.setAuthorId(id);
-		LOGGER.info("(in updateAuthorHandler) authorPojo.toString(): " + authorPojo.toString());
 		AuthorServiceImpl.updateAuthorJooq(queryExecutor, authorPojo).onComplete(noContent(rc));
 	}	
 	
@@ -174,7 +173,6 @@ public class HttpVerticle extends AbstractVerticle {
 		Long id =  Long.valueOf(rc.request().getParam("id"));
 		Category categoryPojo = new Category(rc.getBodyAsJson());
 		categoryPojo.setCategoryId(id);
-		LOGGER.info("(in updateCategoryHandler) categoryPojo.toString(): " + categoryPojo.toString());
 		CategoryServiceImpl.updateCategoryJooq(queryExecutor, categoryPojo).onComplete(noContent(rc));
 	}	
 	
@@ -202,16 +200,14 @@ public class HttpVerticle extends AbstractVerticle {
 	}
 	
 	private void getAllOrdersHandler(RoutingContext rc) {
-		OrderServiceImpl.getAllOrdersJooq3(queryExecutor).onComplete(ok(rc));
+		OrderServiceImpl.getAllOrdersJooq(queryExecutor).onComplete(ok(rc));
 	}
 
 	
 	private void createOrderHandler(RoutingContext rc) {
 		JsonObject orderJO = rc.getBodyAsJson();
-		LOGGER.info("about to read username from URL...");
 		MultiMap parameters = rc.request().params();	    
 		String username = parameters.get("username");
-		LOGGER.info("username: " + username);
 		OrderServiceImpl.createOrderJooq(queryExecutor, orderJO, username).onComplete(created(rc));
 	}
 
