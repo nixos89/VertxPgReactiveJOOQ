@@ -5,13 +5,14 @@
 	<groupId>vertx-pg-reactive</groupId>
 	<artifactId>vertx-pg-reactive-jooq</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<description>VertX implementation using Reactive PostgresSQL Client with plain (handwritten) queries</description>
+	<description>VertX implementation using Reactive PostgresSQL Client with vertx-jOOQ queries</description>
 
 	<properties>
-		<vertx.version>3.8.2</vertx.version>
+		<vertx.version>3.9.0</vertx.version>
 		<main.verticle>com.ns.vertx.pg.MainVerticle</main.verticle>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<jooq.version>3.11.9</jooq.version>
+		<jooq.version>3.13.1</jooq.version>
+		<vertx-jooq-classic-reactive.version>5.1.1</vertx-jooq-classic-reactive.version>
 	</properties>
 
 	<dependencyManagement>
@@ -53,13 +54,17 @@
 			<artifactId>vertx-pg-client</artifactId>
 		</dependency>
 		
-		<!-- added because JOOQ uses JDBC to connect to Postgres DB -->
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-jdbc-client</artifactId>
 		</dependency>
+		
+		<dependency>
+			<groupId>org.javatuples</groupId>
+			<artifactId>javatuples</artifactId>
+			<version>1.2</version>
+		</dependency>
 
-		<!-- added for jooq reactive dependencies::START -->
 		<dependency>
 			<groupId>org.jooq</groupId>
 			<artifactId>jooq</artifactId>
@@ -68,9 +73,8 @@
 		<dependency>
 			<groupId>io.github.jklingsporn</groupId>
 			<artifactId>vertx-jooq-classic-reactive</artifactId>
-			<version>5.0.1</version>
+			<version>${vertx-jooq-classic-reactive.version}</version>
 		</dependency>
-		<!-- added for jooq reactive dependencies::END -->
 	</dependencies>
 
 	<build>
@@ -168,8 +172,8 @@
 				</configuration>
 			</plugin>
 
-			<!-- ================================================================= -->
-			<!-- NEWLY added plugin for "VertX-JOOQ-Classic-Reactive"::START -->
+			<!-- ================================================ -->
+			<!-- Plug-in for "VertX-JOOQ-Classic-Reactive"::START -->
 			<plugin>
 				<!-- Specify the maven code generator plugin -->
 				<groupId>org.jooq</groupId>
@@ -194,12 +198,11 @@
 					<dependency>
 						<groupId>io.github.jklingsporn</groupId>
 						<artifactId>vertx-jooq-generate</artifactId>
-						<version>5.0.1</version>
+						<version>${vertx-jooq-classic-reactive.version}</version>
 					</dependency>
 				</dependencies>
 
-				<!-- Specify the plugin configuration. The configuration format is the 
-					same as for the standalone code generator -->
+				<!-- Specify the plugin configuration. The configuration format is the same as for the standalone code generator -->
 				<configuration>
 					<!-- JDBC connection parameters -->
 					<jdbc>
@@ -209,11 +212,20 @@
 						<password>postgres</password>
 					</jdbc>
 
+					<!-- Adding new generator for being able to access JavaGenerator class -->
+					<generator>
+					<!-- TODO: include plain jOOQ Code generator in order to be able to extend JavaGenerator class -->
+						<name>org.jooq.codegen.JavaGenerator</name>
+					</generator>
+
 					<!-- Generator parameters -->
 					<generator>
+						<!-- The default code generator. You can override this one, to generate your own code style.
+					         Supported generators:
+					         - org.jooq.codegen.JavaGenerator
+					         - org.jooq.codegen.ScalaGenerator
+					         Defaults to org.jooq.codegen.JavaGenerator -->					    
 						<name>io.github.jklingsporn.vertx.jooq.generate.classic.ClassicReactiveVertxGenerator</name>
-						<!-- use 'io.github.jklingsporn.vertx.jooq.generate.classic.ClassicReactiveGuiceVertxGenerator' 
-							to enable Guice DI -->
 						<database>
 							<name>org.jooq.meta.postgres.PostgresDatabase</name>
 							<includes>.*</includes>
@@ -226,23 +238,31 @@
 								<!-- Convert tinyint to boolean -->
 								<forcedType>
 									<name>BOOLEAN</name>
-									<types>(?i:TINYINT)</types>
+									<includeTypes>(?i:TINYINT)</includeTypes>
+									<nullability>ALL</nullability>
+									<objectType>ALL</objectType>
 								</forcedType>
 								<!-- Convert varchar column with name 'someJsonObject' to a io.vertx.core.json.JsonObject -->
 								<forcedType>
 									<userType>io.vertx.core.json.JsonObject</userType>
 									<converter>io.github.jklingsporn.vertx.jooq.shared.JsonObjectConverter</converter>
-									<expression>someJsonObject</expression>
-									<types>.*</types>
+									<includeExpression>someJsonObject</includeExpression>
+									<includeTypes>.*</includeTypes>
+									<nullability>ALL</nullability>
+									<objectType>ALL</objectType>
 								</forcedType>
 								<!-- Convert varchar column with name 'someJsonArray' to a io.vertx.core.json.JsonArray -->
 								<forcedType>
 									<userType>io.vertx.core.json.JsonArray</userType>
 									<converter>io.github.jklingsporn.vertx.jooq.shared.JsonArrayConverter</converter>
-									<expression>someJsonArray</expression>
-									<types>.*</types>
+									<includeExpression>someJsonArray</includeExpression>
+									<includeTypes>.*</includeTypes>
+									<nullability>ALL</nullability>
+									<objectType>ALL</objectType>
 								</forcedType>
 							</forcedTypes>
+							<dateAsTimestamp>true</dateAsTimestamp>
+							<recordTimestampFields>REC_TIMESTAMP</recordTimestampFields>							
 						</database>
 						<target>
 							<!-- This is where jOOQ will put your files -->
@@ -253,16 +273,18 @@
 							<interfaces>true</interfaces>
 							<daos>true</daos>
 							<fluentSetters>true</fluentSetters>
+<!-- 							<javaTimeTypes>true</javaTimeTypes> added because of Timestamp type for order_date field -->
 						</generate>
 
 						<strategy>
 							<name>io.github.jklingsporn.vertx.jooq.generate.VertxGeneratorStrategy</name>
 						</strategy>
 					</generator>
+									
 				</configuration>
 			</plugin>
-			<!-- NEWLY added plugin for "VertX-JOOQ-Classic-Reactive"::END -->
-			<!-- =============================================================== -->
+			<!-- Plug-in for "VertX-JOOQ-Classic-Reactive"::END -->
+			<!-- ============================================== -->
 
 		</plugins>
 	</build>
