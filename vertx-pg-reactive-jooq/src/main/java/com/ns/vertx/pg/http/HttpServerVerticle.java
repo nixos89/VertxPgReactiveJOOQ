@@ -4,69 +4,61 @@ import static com.ns.vertx.pg.http.ActionHelper.created;
 import static com.ns.vertx.pg.http.ActionHelper.noContent;
 import static com.ns.vertx.pg.http.ActionHelper.ok;
 
-import org.jooq.Configuration;
-import org.jooq.SQLDialect;
-import org.jooq.impl.DefaultConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ns.vertx.pg.jooq.tables.pojos.Author;
 import com.ns.vertx.pg.jooq.tables.pojos.Category;
-import com.ns.vertx.pg.service.AuthorServiceImpl;
-import com.ns.vertx.pg.service.BookServiceImpl;
-import com.ns.vertx.pg.service.CategoryServiceImpl;
-import com.ns.vertx.pg.service.OrderServiceImpl;
+import com.ns.vertx.pg.service.CategoryService;
 
-import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
-import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
+import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.pgclient.PgConnectOptions;
-import io.vertx.pgclient.PgPool;
-import io.vertx.sqlclient.PoolOptions;
 
 
-public class HttpVerticle extends AbstractVerticle {
+public class HttpServerVerticle extends AbstractVerticle {
 
-	private final static Logger LOGGER = LoggerFactory.getLogger(HttpVerticle.class);
+	private final static Logger LOGGER = LoggerFactory.getLogger(HttpServerVerticle.class);
 	private static int LISTEN_PORT = 8080;
-
-	private PgPool pgClient;
-	private Configuration configuration;
-	private ReactiveClassicGenericQueryExecutor queryExecutor;	
+	private static final String CONFIG_HTTP_SERVER_PORT = "http.server.port";
+	
+	public static final String CONFIG_AUTHORDB_QUEUE = "author.queue";
+	public static final String CONFIG_BOOKDB_QUEUE = "book.queue";
+	public static final String CONFIG_CATEGORYDB_QUEUE = "category.queue";		
+	public static final String CONFIG_ORDERSDB_QUEUE = "orders.queue";
+	
+	private CategoryService categoryService;
+//	private AuthorService authorService;
+//	private BookService bookService;
+//	private OrderService orderService;
+	
 		
 	@Override
 	public void start(Promise<Void> startPromise) throws Exception {
+		String categoryAddress = config().getString(CONFIG_CATEGORYDB_QUEUE, "category.queue");
+//		String authorAddress = config().getString(CONFIG_AUTHORDB_QUEUE, "author.queue");
+//		String bookAddress = config().getString(CONFIG_BOOKDB_QUEUE, "book.queue");
+//		String orderAddress = config().getString(CONFIG_ORDERSDB_QUEUE, "orders.queue");
+		
+		categoryService = CategoryService.createCategoryProxy(vertx, categoryAddress);
+		// TODO: uncomment + initialize (same uncommented) service instances
+		
+		
+		
 		Router routerREST = Router.router(vertx);
 		routerREST.post().handler(BodyHandler.create());
 		routerREST.put().handler(BodyHandler.create());		
-		// Authors REST API
-		routerREST.get("/authors").handler(this::getAllAuthorsHandler);
-		routerREST.get("/authors/:id").handler(this::getAuthorByIdHandler);				
-		routerREST.post("/authors").handler(this::createAuthorHandler);
-		routerREST.put("/authors/:id").handler(this::updateAuthorHandler);
-		routerREST.delete("/authors/:id").handler(this::deleteAuthorHandler);				
+		
 		// Categories REST API		
 		routerREST.get("/categories").handler(this::getAllCategoriesHandler);
 		routerREST.get("/categories/:id").handler(this::getCategoryByIdHandler);				
 		routerREST.post("/categories").handler(this::createCategoryHandler);
 		routerREST.put("/categories/:id").handler(this::updateCategoryHandler);
 		routerREST.delete("/categories/:id").handler(this::deleteCategoryHandler);
-		// Books REST API		
-		routerREST.get("/books").handler(this::getAllBooksHandlerJooq);
-		routerREST.get("/authors/:id/books").handler(this::getAllBooksByAuthorIdHandler);
-		routerREST.get("/books/:id").handler(this::getBookByIdHandler);				
-		routerREST.post("/books").handler(this::createBookHandler);
-		routerREST.put("/books/:id").handler(this::updateBookHandler);
-		routerREST.delete("/books/:id").handler(this::deleteBookHandler);		
-		// Orders REST API
-		routerREST.get("/orders").handler(this::getAllOrdersHandler);
-		routerREST.post("/orders").handler(this::createOrderHandler);
 		
 		Router routerAPI = Router.router(vertx);
 		routerAPI.mountSubRouter("/api", routerREST);
@@ -76,27 +68,20 @@ public class HttpVerticle extends AbstractVerticle {
 				failure.printStackTrace();
 			}
 		});
-
-		PgConnectOptions connectOptions = new PgConnectOptions()
-			.setPort(5432)
-			.setHost("localhost")
-			.setDatabase("vertx-jooq-cr")
-			.setUser("postgres").setPassword("postgres"); // DB User credentials
-
-		PoolOptions poolOptions = new PoolOptions().setMaxSize(30);
-		pgClient = PgPool.pool(vertx, connectOptions, poolOptions);
-
-		// setting up JOOQ configuration
-		configuration = new DefaultConfiguration();
-		configuration.set(SQLDialect.POSTGRES);
-		
-		/* NOT: D connection is AUTOMATICALY CLOSED! More info at:
-		 * https://www.jooq.org/doc/3.11/manual/getting-started/tutorials/jooq-in-7-steps/jooq-in-7-steps-step5/ */
-		queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
-		// no other DB-Configuration necessary because jOOQ is only used to render our statements - not for execution		
 		
 		LOGGER.info("Whole setUp in in start() went well...");
-		createHttpServer(routerAPI).onComplete(startPromise);	
+		// FIXME: 001-code DIRECTLY here CREATION of HttpServer
+		HttpServer server = vertx.createHttpServer();
+		int portNumber =  config().getInteger(CONFIG_HTTP_SERVER_PORT, LISTEN_PORT);
+		server.requestHandler(routerAPI).listen(portNumber, ar -> {
+			if (ar.succeeded()) {
+				LOGGER.info("HTTP Server running on port " + portNumber);
+				startPromise.complete();
+			} else {
+				LOGGER.error("Colud NOT start HTTP server!!!! Cause: " + ar.cause());
+				startPromise.fail(ar.cause());
+			}
+		});		
 	}// start::END
 
 
@@ -104,11 +89,48 @@ public class HttpVerticle extends AbstractVerticle {
 		Promise<Void> promise = Promise.promise();		
 		vertx.createHttpServer()
 			 .requestHandler(router)
-			 .listen(LISTEN_PORT, res -> promise.handle(res.mapEmpty()));
+			 .listen(LISTEN_PORT, res -> {
+				 if(res.succeeded()) {
+					 LOGGER.info("Success, HttpServer running on port = " + LISTEN_PORT);
+					 promise.complete();
+				 } else {
+					 LOGGER.error("Could NOT start HttpServer! Cause: " + res.cause());
+					 promise.fail(res.cause());
+				 }
+			 });
 		return promise.future();
 	}
-
 	
+
+	private void getAllCategoriesHandler(RoutingContext rc) {
+		categoryService.getAllCategoriesJooqSP(ok(rc));				
+	}
+	
+	private void getCategoryByIdHandler(RoutingContext rc) {
+		Long id = Long.valueOf(rc.request().getParam("id"));
+		categoryService.getCategoryByIdJooqSP(id, ok(rc));
+	}	
+	
+	private void updateCategoryHandler(RoutingContext rc) {
+		Long id =  Long.valueOf(rc.request().getParam("id"));
+		Category categoryPojo = new Category(rc.getBodyAsJson());
+		categoryPojo.setCategoryId(id);
+		JsonObject categoryJO = categoryPojo.toJson();
+		categoryService.updateCategoryJooqSP(categoryJO, noContent(rc));
+	}
+	
+	private void createCategoryHandler(RoutingContext rc) {
+		JsonObject json = rc.getBodyAsJson();
+		categoryService
+			.createCategoryJooqSP(json.getString("name"), json.getBoolean("is_deleted"), created(rc));
+	}
+	
+	private void deleteCategoryHandler(RoutingContext rc) {
+		Long id =  Long.valueOf(rc.request().getParam("id"));
+		categoryService.deleteCategoryJooqSP(id, noContent(rc));		
+	}
+	
+	/*
 	private void getAllAuthorsHandler(RoutingContext rc) {
 		AuthorServiceImpl.getAllAuthorsJooq(queryExecutor).onComplete((ok(rc)));				
 	}	
@@ -121,11 +143,6 @@ public class HttpVerticle extends AbstractVerticle {
 		Long id = Long.valueOf(rc.request().getParam("id"));
 		AuthorServiceImpl.getAuthorByIdJooq(queryExecutor, id).onComplete(ok(rc));
 	}
-	
-	private void getCategoryByIdHandler(RoutingContext rc) {
-		Long id = Long.valueOf(rc.request().getParam("id"));
-		CategoryServiceImpl.getCategoryByIdJooq(queryExecutor, id).onComplete(ok(rc));
-	}	
 	
 	private void getAllBooksHandlerJooq(RoutingContext rc) {		
 		BookServiceImpl.getAllBooksJooq(queryExecutor).onComplete(ok(rc));
@@ -169,16 +186,6 @@ public class HttpVerticle extends AbstractVerticle {
 		AuthorServiceImpl.updateAuthorJooq(queryExecutor, authorPojo).onComplete(noContent(rc));
 	}	
 	
-	
-	private void updateCategoryHandler(RoutingContext rc) {
-		Long id =  Long.valueOf(rc.request().getParam("id"));
-		Category categoryPojo = new Category(rc.getBodyAsJson());
-		categoryPojo.setCategoryId(id);
-//		JsonObject categoryJO = categoryPojo.toJson();
-//		categoryService.updateCategoryJooqSP(categoryJO, noContent(rc));
-		CategoryServiceImpl.updateCategoryJooq(queryExecutor, categoryPojo).onComplete(noContent(rc));
-	}	
-	
 	private void updateBookHandler(RoutingContext rc) {
 		long id = (long) Integer.valueOf(rc.request().getParam("id"));
 		JsonObject bookJO = rc.getBodyAsJson();
@@ -213,5 +220,5 @@ public class HttpVerticle extends AbstractVerticle {
 		String username = parameters.get("username");
 		OrderServiceImpl.createOrderJooq(queryExecutor, orderJO, username).onComplete(created(rc));
 	}
-
+*/
 }

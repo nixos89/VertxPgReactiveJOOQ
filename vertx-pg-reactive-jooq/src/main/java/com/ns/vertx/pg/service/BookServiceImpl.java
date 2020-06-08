@@ -21,6 +21,7 @@ import com.ns.vertx.pg.jooq.tables.pojos.Book;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
@@ -266,14 +267,23 @@ public class BookServiceImpl {
 				.update(BOOK).set(BOOK.TITLE, bookPojo.getTitle())
 				.set(BOOK.PRICE, bookPojo.getPrice()).set(BOOK.AMOUNT, bookPojo.getAmount()).set(BOOK.IS_DELETED, bookPojo.getIsDeleted())
 				.where(BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
-			).compose(res -> iterateCBFuture).compose(res -> iterateABFuture)
+			).compose(res -> CompositeFuture
+				.all(iterateCBFuture, iterateABFuture)
+				.compose(success -> {
+					  LOGGER.info("Commiting transaction...");
+					  return transcationQE.commit();
+				  }, failure -> {
+					  LOGGER.info("Rolling back transaction...");
+					  return transcationQE.rollback();
+				  })
+			));/*
 			 .compose(success -> {
 				  LOGGER.info("Commiting transaction...");
 				  return transcationQE.commit();
 			  }, failure -> {
 				  LOGGER.info("Rolling back transaction...");
 				  return transcationQE.rollback();
-			  }));
+			  }));*/
 		updateBookFuture.onSuccess(handler -> { LOGGER.info("Success, book UPDATE is successful!"); promise.complete(); });
 		updateBookFuture.onFailure(handler -> { LOGGER.error("Error, book UPDATE FAILED!"); promise.fail(handler); });		
 		return promise.future();

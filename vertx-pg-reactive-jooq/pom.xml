@@ -32,39 +32,39 @@
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-core</artifactId>
 		</dependency>
-
+	
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-config</artifactId>
 		</dependency>
-
+	
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-web</artifactId>
 		</dependency>
-
+	
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
 			<version>1.2.3</version>
 		</dependency>
-
+	
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-pg-client</artifactId>
 		</dependency>
-		
+	
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-jdbc-client</artifactId>
 		</dependency>
-		
+	
 		<dependency>
 			<groupId>org.javatuples</groupId>
 			<artifactId>javatuples</artifactId>
 			<version>1.2</version>
 		</dependency>
-
+	
 		<dependency>
 			<groupId>org.jooq</groupId>
 			<artifactId>jooq</artifactId>
@@ -74,6 +74,16 @@
 			<groupId>io.github.jklingsporn</groupId>
 			<artifactId>vertx-jooq-classic-reactive</artifactId>
 			<version>${vertx-jooq-classic-reactive.version}</version>
+		</dependency>
+	
+		<dependency>
+			<groupId>io.vertx</groupId>
+			<artifactId>vertx-service-proxy</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.vertx</groupId>
+			<artifactId>vertx-codegen</artifactId>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 
@@ -87,7 +97,27 @@
 						<source>1.8</source>
 						<target>1.8</target>
 						<useIncrementalCompilation>false</useIncrementalCompilation>
+						
+						<annotationProcessors>
+							<annotationProcessor>io.vertx.codegen.CodeGenProcessor</annotationProcessor>
+					    </annotationProcessors>
+						<generatedSourcesDirectory>${project.basedir}/src/main/generated</generatedSourcesDirectory>
+					    <compilerArgs>
+      						<arg>-AoutputDirectory=${project.basedir}/src/main</arg>
+					    </compilerArgs>						
 					</configuration>
+				</plugin>
+
+				<plugin>
+				  <artifactId>maven-clean-plugin</artifactId>
+				  <version>3.0.0</version>
+				  <configuration>
+				    <filesets>
+				      <fileset>
+				        <directory>${project.basedir}/src/main/generated</directory>
+				      </fileset>
+				    </filesets>
+				  </configuration>
 				</plugin>
 
 				<plugin>
