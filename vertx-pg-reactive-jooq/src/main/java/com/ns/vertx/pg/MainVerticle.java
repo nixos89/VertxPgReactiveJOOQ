@@ -18,12 +18,9 @@ public class MainVerticle extends AbstractVerticle {
 	@Override
 	public void start(Promise<Void> startPromise) throws Exception {
 		Promise<String> dbVerticleDepoyment = Promise.promise();
-		vertx.deployVerticle(new DatabaseVerticle(), dbVerticleDepoyment );
-		LOGGER.info(" ================ DatabaseVerticle has been deployed... =================");	
+		vertx.deployVerticle(new DatabaseVerticle(), dbVerticleDepoyment );	
 		
-		dbVerticleDepoyment.future().compose(ar -> {
-			LOGGER.info(" ======== Starting to compose DatabaseVerticle and HttpServerVerticle... ====== ");
-			
+		dbVerticleDepoyment.future().compose(ar -> {			
 			Promise<String> httpVerticleDeployment = Promise.promise();
 			vertx.deployVerticle(HttpServerVerticle.class.getName(), 
 					new DeploymentOptions().setInstances(HTTP_INSTANCE_NUM),
@@ -41,7 +38,6 @@ public class MainVerticle extends AbstractVerticle {
 				startPromise.fail(handler.cause());
 			}
 		});
-		LOGGER.info("======== passed compose() and setHandler() methods!!! =========");
-	}
+	}	
 
 }

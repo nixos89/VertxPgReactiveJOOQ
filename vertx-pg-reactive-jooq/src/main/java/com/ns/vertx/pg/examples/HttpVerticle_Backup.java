@@ -159,7 +159,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 			return retFuture.future();
 		});
 
-		futureConnection.compose(v -> createHttpServer(pgClient, routerAPI)).onComplete(startPromise);
+		futureConnection.compose(v -> createHttpServer(routerAPI)).onComplete(startPromise);
 	}// start::END
 
 	public Future<SqlConnection> connect() {
@@ -172,7 +172,7 @@ public class HttpVerticle_Backup extends AbstractVerticle {
 		return promise.future();
 	}
 
-	public Future<Void> createHttpServer(PgPool pgClient, Router router) {
+	public Future<Void> createHttpServer(Router router) {
 		Promise<Void> promise = Promise.promise();
 		vertx.createHttpServer().requestHandler(router).listen(LISTEN_PORT, res -> promise.handle(res.mapEmpty()));
 		return promise.future();

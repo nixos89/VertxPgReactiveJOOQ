@@ -11,9 +11,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.jooq.CommonTableExpression;
+import org.jooq.Configuration;
+import org.jooq.JSON;
 import org.jooq.Record2;
 import org.jooq.impl.DSL;
-import org.jooq.impl.SQLDataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,159 +22,92 @@ import com.ns.vertx.pg.jooq.tables.pojos.Book;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
+import io.vertx.pgclient.PgPool;
+import io.vertx.sqlclient.SqlConnection;
 
 
-
-public class BookServiceImpl {
+public class BookServiceImpl implements BookService {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(BookServiceImpl.class);
-		
-	public static Future<JsonObject> getAllBooksJooq(ReactiveClassicGenericQueryExecutor queryExecutor) {
-		Promise<JsonObject> finalRes = Promise.promise();					
-		Future<QueryResult> bookFuture = queryExecutor.transaction(qe -> {			
-			return qe.query(dsl -> dsl.resultQuery(DBQueries.GET_ALL_BOOKS));
+	
+	private ReactiveClassicGenericQueryExecutor queryExecutor;
+	
+	
+	public BookServiceImpl(PgPool pgClient, Configuration configuration, Handler<AsyncResult<BookService>> readyHandler) {
+		LOGGER.info("+++++++++ going to instantiate (ReactiveClassicGenericQueryExecutor) queryExecutor in BookServiceImpl! +++++++++");
+		pgClient.getConnection(ar -> {
+			if (ar.failed()) {
+				LOGGER.error("Could NOT OPEN DB connection!", ar.cause());
+				readyHandler.handle(Future.failedFuture(ar.cause()));
+			} else {
+				SqlConnection connection = ar.result();						
+				LOGGER.info("++++++++++++++++++++++ Connection succeded! ++++++++++++++++++++++");
+				this.queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
+				LOGGER.info("+++++++++ queryExecutor instantiation is SUCCESSFUL (in BookServiceImpl)! +++++++++");
+				connection.close();		
+				readyHandler.handle(Future.succeededFuture(this));
+			}
+		});		
+//		this.queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
+	}		
+
+
+	// ************************************************************************************************
+	// ******************************* CategoryService CRUD methods *********************************** 
+	// ************************************************************************************************
+	
+	@Override
+	public BookService getAllBooksJooqSP(Handler<AsyncResult<JsonObject>> resultHandler) {
+		Future<QueryResult> bookFuture = queryExecutor.transaction(transactionQE -> {			
+			return transactionQE.query(dsl -> dsl				
+					.select(BOOK.BOOK_ID.as("b_id"), BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED, 
+							DSL.field( "to_json(array_agg(DISTINCT {0}.*))", JSON.class, AUTHOR).as("authors"),
+							DSL.field("to_json(array_agg(DISTINCT {0}.*))", JSON.class, CATEGORY).as("categories")
+					).from(BOOK
+						.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
+						.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
+						.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
+						.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
+					).groupBy(BOOK.BOOK_ID).orderBy(BOOK.BOOK_ID.asc())
+				);
 		});						
 	    bookFuture.onComplete(handler -> {
 			if (handler.succeeded()) {								
 				QueryResult booksQR = handler.result();				
 				JsonObject booksJsonObject = BookUtilHelper.extractBooksFromQR(booksQR);
-				finalRes.complete(booksJsonObject);
+				resultHandler.handle(Future.succeededFuture(booksJsonObject));
 	    	} else {
 	    		LOGGER.error("Error, something failed in retrivening ALL books! Cause: " 
 	    				+ handler.cause().getMessage());
 	    		queryExecutor.rollback();
-	    		finalRes.fail(new NoSuchElementException("There are no saved books in database!"));
+	    		resultHandler.handle(Future.failedFuture(new NoSuchElementException("There are no saved books in database!")));
 	    	}
-	    }); 
-		
-		return finalRes.future();
+	    }); 		
+		return this;
 	}
-		
 
-	public static Future<JsonObject> getAllBooksByAuthorIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long authorId) {
-		Promise<JsonObject> finalRes = Promise.promise();				
-		
-//		Future<List<Row>> bookFuture = queryExecutor.transaction(qe -> {			
-//			return qe.findManyRow(dsl -> dsl
-//				/* TODO: must use DISTINCT for AUTHORS and CATEGORIES to be able to return ALL of them in 1 ROW!!! 
-//				 *   For now it's all being SINGLE row e.g.: 
-//				 *   bookID=1, category=8
-//				 *   bookID=1, category=9 */
-//				.select(BOOK.BOOK_ID, BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED, 
-//						DSL.val(DSL.jsonArray(DSL.arrayAggDistinct(AUTHOR.AUTHOR_ID), 
-//								DSL.arrayAggDistinct(AUTHOR.FIRST_NAME),
-//								DSL.arrayAggDistinct(AUTHOR.LAST_NAME))
-//						).cast(SQLDataType.JSON),					
-//						DSL.val(DSL.jsonArray(DSL.arrayAggDistinct(CATEGORY.CATEGORY_ID), 
-//								DSL.arrayAggDistinct(CATEGORY.NAME), 
-//								DSL.arrayAggDistinct(CATEGORY.IS_DELETED))
-//						).cast(SQLDataType.JSON)
-//				).from(BOOK
-//					.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
-//					.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
-//					.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
-//					.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
-//				).where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(authorId))
-//				).groupBy(BOOK.BOOK_ID).orderBy(BOOK.BOOK_ID.asc())
-//			);
-//		});			
-		
-//		Future<QueryResult> bookFuture = queryExecutor.transaction(qe -> {			
-//			return qe.query(dsl -> dsl
-//				/* TODO: must use DISTINCT for AUTHORS and CATEGORIES to be able to return ALL of them in 1 ROW!!! 
-//				 *   For now it's all being SINGLE row e.g.: 
-//				 *   bookID=1, category=8
-//				 *   bookID=1, category=9 */
-//				.select(BOOK.BOOK_ID.as("b_id"), BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED, 
-//						DSL.jsonArray(AUTHOR.AUTHOR_ID, 
-//								AUTHOR.FIRST_NAME,
-//								AUTHOR.LAST_NAME).as("authors"),
-//											
-//						DSL.jsonArray(DSL.arrayAggDistinct(CATEGORY.CATEGORY_ID), 
-//								DSL.arrayAggDistinct(CATEGORY.NAME), 
-//								DSL.arrayAggDistinct(CATEGORY.IS_DELETED)).as("categories")
-//				).from(BOOK
-//					.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
-//					.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
-//					.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
-//					.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
-//				).where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(authorId))
-//				).groupBy(BOOK.BOOK_ID, AUTHOR.AUTHOR_ID).orderBy(BOOK.BOOK_ID.asc())
-//			);
-//		});		
-		
-		
-		Future<QueryResult> bookFuture = queryExecutor.transaction(qe -> {			
-			return qe.query(dsl -> dsl
-				.select(BOOK.BOOK_ID.as("b_id"), BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED, 
-						DSL.jsonArray(DSL.arrayAggDistinct(AUTHOR.AUTHOR_ID)).as("authors"),
-											
-						DSL.val(DSL.jsonArray(DSL.arrayAggDistinct(CATEGORY.CATEGORY_ID), 
-								DSL.arrayAggDistinct(CATEGORY.NAME), 
-								DSL.arrayAggDistinct(CATEGORY.IS_DELETED))).as("categories").cast(SQLDataType.JSON)
-				).from(BOOK
-					.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
-					.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
-					.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
-					.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
-				).where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(authorId))
-				).groupBy(BOOK.BOOK_ID, AUTHOR.AUTHOR_ID).orderBy(BOOK.BOOK_ID.asc())
-			);
-		});	
-		
-		
-		
-	    bookFuture.onComplete(handler -> {
-			if (handler.succeeded()) {								
-//				List<Row> booksLR = handler.result();
-				QueryResult booksQR = handler.result();
-//				JsonObject booksJsonObject = BookUtilHelper.extractBooksFromLR(booksLR);
-				JsonObject booksJsonObject = BookUtilHelper.extractBooksFromQR(booksQR);
-				LOGGER.info("bookJsonObject.encodePrettily(): " + booksJsonObject.encodePrettily());
-				finalRes.complete(booksJsonObject);
-	    	} else {
-	    		LOGGER.error("Error, something failed in retrivening ALL books! Cause: " 
-	    				+ handler.cause().getMessage());
-	    		queryExecutor.rollback();
-	    		finalRes.fail(handler.cause());
-	    	}
-	    }); 		
-		return finalRes.future();
-	}
-	
-	
-	public static Future<JsonObject> getAllBooksByAuthorIdJooqMix(ReactiveClassicGenericQueryExecutor queryExecutor, long authorId) {
-		Promise<JsonObject> finalRes = Promise.promise();
-		
-		Future<QueryResult> bookFuture = queryExecutor.transaction(qe -> {
-			return qe.query(dsl -> dsl
-			    .resultQuery(DBQueries.GET_ALL_BOOKS_BY_AUTHOR_ID, Long.valueOf(authorId)));
-		});							
-	    bookFuture.onComplete(handler -> {
-			if (handler.succeeded()) {								
-				QueryResult booksByAuthorIdQR = handler.result();				
-				JsonObject booksJsonObject = BookUtilHelper.extractBooksFromQR(booksByAuthorIdQR);
-				LOGGER.info("bookJsonObject.encodePrettily(): " + booksJsonObject.encodePrettily());
-				finalRes.complete(booksJsonObject);
-	    	} else {
-	    		LOGGER.error("Error, something failed in retrivening ALL books! Cause: " + handler.cause().getMessage());
-	    		queryExecutor.rollback();
-	    		finalRes.fail(handler.cause());
-	    	}
-	    }); 		
-		return finalRes.future();
-	}
-	
-		
-	public static Future<JsonObject> getBookByIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long bookId) {
-		Promise<JsonObject> finalRes = Promise.promise();
-		Future<QueryResult> bookFuture = queryExecutor.transaction(qe -> {
-			return qe.query(dsl -> dsl
-			    .resultQuery(DBQueries.GET_BOOK_BY_BOOK_ID, Long.valueOf(bookId)));
+
+	@Override
+	public BookService getBookByIdJooqSP(Long bookId, Handler<AsyncResult<JsonObject>> resultHandler) {
+		Future<QueryResult> bookFuture = queryExecutor.transaction(transactionQE -> {
+			return transactionQE.query(dsl -> dsl				
+					.select(BOOK.BOOK_ID.as("b_id"), BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED, 
+							DSL.field( "to_json(array_agg(DISTINCT {0}.*))", JSON.class, AUTHOR).as("authors"),
+							DSL.field("to_json(array_agg(DISTINCT {0}.*))", JSON.class, CATEGORY).as("categories")
+					).from(BOOK
+						.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
+						.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
+						.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
+						.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
+					).where(BOOK.BOOK_ID.eq(bookId)
+					).groupBy(BOOK.BOOK_ID).orderBy(BOOK.BOOK_ID.asc())
+				);			    
 		});								    
 	    bookFuture.onComplete(handler -> {
 			if (handler.succeeded()) {									
@@ -181,27 +115,60 @@ public class BookServiceImpl {
 				if (booksQR != null) {
 					JsonObject bookJsonObject = BookUtilHelper.fillBook(booksQR);
 					if (bookJsonObject == null) {
-						finalRes.fail(new NoSuchElementException("Error, no book has been found in DB for book_id = " + bookId));
+						resultHandler.handle(Future.failedFuture(new NoSuchElementException(
+								"Error, no book has been found in DB for book_id = " + bookId)));
 					}  else {
-						finalRes.complete(bookJsonObject);	
+						resultHandler.handle(Future.succeededFuture(bookJsonObject));	
 					}					
 				} else {				
-					finalRes.complete(new JsonObject().put("message", "Book with id " + bookId + " does NOT exist in DB!"));
+					resultHandler.handle(Future.succeededFuture(
+							new JsonObject().put("message", "Book with id " + bookId + " does NOT exist in DB!")));
 				}				
 	    	} else {
 	    		LOGGER.error("Error, something failed in retrivening query by book_id = " + bookId);
 	    		queryExecutor.rollback();
-	    		finalRes.fail(handler.cause());
+	    		resultHandler.handle(Future.failedFuture(handler.cause()));
 	    	}
 	    }); 
-		return finalRes.future();
+		return this;
 	}
+
 	
-	
-	public static Future<Void> createBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, JsonObject bookJO) {
-		Promise<Void> promise = Promise.promise();			
-		Book bookPojo = new Book(bookJO); 
-		
+	@Override
+	public BookService getAllBooksByAuthorIdJooqSP(Long authorId, Handler<AsyncResult<JsonObject>> resultHandler) {					
+		Future<QueryResult> authorBooksFuture = queryExecutor.transaction(transactionQE -> {			
+			return transactionQE.query(dsl -> dsl				
+				.select(BOOK.BOOK_ID.as("b_id"), BOOK.TITLE, BOOK.PRICE, BOOK.AMOUNT, BOOK.IS_DELETED, 
+						DSL.field( "to_json(array_agg(DISTINCT {0}.*))", JSON.class, AUTHOR).as("authors"),
+						DSL.field("to_json(array_agg(DISTINCT {0}.*))", JSON.class, CATEGORY).as("categories")
+				).from(BOOK
+					.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
+					.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
+					.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
+					.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
+				).where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(authorId))
+				).groupBy(BOOK.BOOK_ID).orderBy(BOOK.BOOK_ID.asc())
+			);
+		});						
+		authorBooksFuture.onComplete(handler -> {
+			if (handler.succeeded()) {								
+				QueryResult booksQR = handler.result();
+				JsonObject booksJsonObject = BookUtilHelper.extractBooksFromQR(booksQR);
+				LOGGER.info("bookJsonObject.encodePrettily(): " + booksJsonObject.encodePrettily());
+				resultHandler.handle(Future.succeededFuture(booksJsonObject));
+	    	} else {
+	    		LOGGER.error("Error, something failed in retrivening ALL books! Cause: " 
+	    				+ handler.cause().getMessage());
+	    		queryExecutor.rollback();
+	    		resultHandler.handle(Future.failedFuture(handler.cause()));
+	    	}
+	    }); 		
+		return this;
+	}	
+
+	@Override
+	public BookService createBookJooqSP(JsonObject bookJO, Handler<AsyncResult<Void>> resultHandler) {
+		Book bookPojo = new Book(bookJO); 		
 		Future<Void> transactionFuture = queryExecutor.beginTransaction().compose(transactionQE -> 
 			transactionQE.executeAny(dsl -> dsl		
 				.insertInto(BOOK, BOOK.TITLE, BOOK.AMOUNT, BOOK.PRICE, BOOK.IS_DELETED)
@@ -216,15 +183,13 @@ public class BookServiceImpl {
 				Set<Long> categoryIds = bookJO.getJsonArray("category_ids").stream().mapToLong(c -> Long.valueOf(String.valueOf(c))).boxed().collect(Collectors.toSet());																	
 								
 				return transactionQE.execute(dsl -> {										
-					CommonTableExpression<Record2<Long, Long>> author_book_tbl = BookUtilHelper.author_book_tbl(dsl, bookId, authorIds);
-					
+					CommonTableExpression<Record2<Long, Long>> author_book_tbl = BookUtilHelper.author_book_tbl(dsl, bookId, authorIds);					
 					return dsl.with(author_book_tbl)						
 						.insertInto(AUTHOR_BOOK, AUTHOR_BOOK.BOOK_ID, AUTHOR_BOOK.AUTHOR_ID)
 						.select(dsl.selectFrom(author_book_tbl));
 				}).compose(res -> {
 					return transactionQE.execute(dsl -> { 						
-						CommonTableExpression<Record2<Long, Long>> category_book_tbl = BookUtilHelper.category_book_tbl(dsl, bookId, categoryIds);
-											
+						CommonTableExpression<Record2<Long, Long>> category_book_tbl = BookUtilHelper.category_book_tbl(dsl, bookId, categoryIds);											
 						return dsl.with(category_book_tbl)									
 							.insertInto(CATEGORY_BOOK, CATEGORY_BOOK.BOOK_ID, CATEGORY_BOOK.CATEGORY_ID)
 						    .select(dsl.selectFrom(category_book_tbl));					
@@ -240,24 +205,24 @@ public class BookServiceImpl {
 		transactionFuture.onComplete(handler -> {
 			if (handler.succeeded()) {
 				LOGGER.info("Success, inserting is completed!");
-				promise.complete();
+				resultHandler.handle(Future.succeededFuture());
 			} else {
 				LOGGER.error("Error, somethin' WENT WRRRONG!! handler.result() = " + handler.result());
-				promise.handle(Future.failedFuture(handler.cause()));
+				resultHandler.handle(Future.failedFuture(handler.cause()));
 			}
 		});
-		return promise.future();
-	}		
-		
+		return this;
+	}
 
-	public static Future<JsonObject> updateBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, JsonObject bookJO, long bookId) {				
-		Promise<JsonObject> promise = Promise.promise();				 
+
+	@Override
+	public BookService updateBookJooqSP(JsonObject bookJO, Handler<AsyncResult<Void>> resultHandler) {
 		Set<Long> authorUpdatedIds = bookJO.getJsonArray("authors").stream()
 				.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());	
 		
 		Set<Long> categoryUpdatedIds = bookJO.getJsonArray("categories").stream()
 				.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());		
-		
+		Long bookId = bookJO.getLong("book_id");
 		Future<Void> iterateCBFuture = iterateCategoryBook(queryExecutor, categoryUpdatedIds, bookId);
 		Future<Void> iterateABFuture = iterateAuthorBook(queryExecutor, authorUpdatedIds, bookId);		
 		
@@ -276,22 +241,16 @@ public class BookServiceImpl {
 					  LOGGER.info("Rolling back transaction...");
 					  return transcationQE.rollback();
 				  })
-			));/*
-			 .compose(success -> {
-				  LOGGER.info("Commiting transaction...");
-				  return transcationQE.commit();
-			  }, failure -> {
-				  LOGGER.info("Rolling back transaction...");
-				  return transcationQE.rollback();
-			  }));*/
-		updateBookFuture.onSuccess(handler -> { LOGGER.info("Success, book UPDATE is successful!"); promise.complete(); });
-		updateBookFuture.onFailure(handler -> { LOGGER.error("Error, book UPDATE FAILED!"); promise.fail(handler); });		
-		return promise.future();
-	}	
-
+			));
+		updateBookFuture.onSuccess(handler -> resultHandler.handle(Future.succeededFuture()));
+		updateBookFuture.onFailure(handler -> resultHandler.handle(Future.failedFuture(handler)));		
+		return this;
+	}
+	
+	
 	// ***************************************************************************************************************
 	
-	private static Future<Void> iterateCategoryBook(ReactiveClassicGenericQueryExecutor queryExecutor, Set<Long> categoryUpdatedIds, long bookId) {
+	private Future<Void> iterateCategoryBook(ReactiveClassicGenericQueryExecutor queryExecutor, Set<Long> categoryUpdatedIds, long bookId) {
 		Promise<Void> promise = Promise.promise();				
 		Future<Integer> iterateCBFuture = queryExecutor.findManyRow(dsl -> dsl
 				.select(CATEGORY_BOOK.CATEGORY_ID).from(CATEGORY_BOOK)
@@ -343,7 +302,7 @@ public class BookServiceImpl {
 	}	
 	
 
-	private static Future<Void> iterateAuthorBook(ReactiveClassicGenericQueryExecutor queryExecutor, Set<Long> authorUpdatedIds, long bookId) {
+	private Future<Void> iterateAuthorBook(ReactiveClassicGenericQueryExecutor queryExecutor, Set<Long> authorUpdatedIds, long bookId) {
 		Promise<Void> promise = Promise.promise();				
 		Future<Integer> iterateABFuture = queryExecutor.findManyRow(dsl -> dsl.select(AUTHOR_BOOK.AUTHOR_ID).from(AUTHOR_BOOK)
 				.where(AUTHOR_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))).compose(existingAC -> {
@@ -390,28 +349,27 @@ public class BookServiceImpl {
 		iterateABFuture.onFailure(handler -> {LOGGER.error("Error, iterateABFuture FAILED!"); promise.fail(handler);});
 		return promise.future();
 	}
+
 	
-	// ***************************************************************************************************************
-	// TODO: maybe LEAVE out this method -> it's unnecessary since Book already contains 'is_deleted' field !
-	public static Future<Void> deleteBookJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long id) {
-		Promise<Void> promise = Promise.promise();
+	// TODO: maybe LEAVE out this method -> it's unnecessary since Book already contains 'is_deleted' field !	
+	@Override
+	public BookService deleteBookJooqSP(Long id, Handler<AsyncResult<Void>> resultHandler) {
 		Future<Integer> deleteBookFuture =  queryExecutor.transaction(transactionQE -> {
 			return transactionQE.execute(dsl -> dsl.delete(BOOK).where(BOOK.BOOK_ID.eq(Long.valueOf(id))));
-		});
-			
+		});			
 		deleteBookFuture.onComplete(ar -> {
 			if (ar.succeeded()) {
 				LOGGER.info("Success, deletion successful for Book id = " + id);
-				promise.handle(Future.succeededFuture());
+				resultHandler.handle(Future.succeededFuture());
 			} else {
 				LOGGER.error("Error, deletion failed for Book id = " + id);
 				Future<Void> rollbackFuture = queryExecutor.rollback();
 				rollbackFuture.onSuccess(handler -> LOGGER.info("Transaction successfully rolledback!"));
 				rollbackFuture.onFailure(handler -> LOGGER.info("Error, transcation did NOT rollback! Cause: " + handler.getCause()));				
-				promise.handle(Future.failedFuture(new NoSuchElementException("No book with id = " + id)));
+				resultHandler.handle(Future.failedFuture(new NoSuchElementException("No book with id = " + id)));
 			}
 		});		
-		return promise.future();
+		return this;
 	}
 	
 

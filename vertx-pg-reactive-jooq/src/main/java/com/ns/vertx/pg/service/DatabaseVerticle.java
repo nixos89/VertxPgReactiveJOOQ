@@ -17,7 +17,6 @@ public class DatabaseVerticle extends AbstractVerticle {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseVerticle.class);
 	
-	// TODO: move DB classes/interfaces (from HttpVerticle) for instantiating in here IFF it's possible	
 	public static final String CONFIG_AUTHOR_QUEUE = "author.queue";
 	public static final String CONFIG_BOOK_QUEUE = "book.queue";
 	public static final String CONFIG_CATEGORY_QUEUE = "category.queue";	
@@ -36,26 +35,66 @@ public class DatabaseVerticle extends AbstractVerticle {
 
 		// setting up JOOQ configuration
 		Configuration configuration = new DefaultConfiguration();
-		configuration.set(SQLDialect.POSTGRES);
-		
-//		LOGGER.info("About to create ReactiveClassicGenericQueryExecutor instance...");
-//		ReactiveClassicGenericQueryExecutor queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
+		configuration.set(SQLDialect.POSTGRES);	
 		
 		/* TODO: 001-create ServiceBinder (or whatever) to utilize queryExecutor through all ServiceImpl classes also try to 
 		 *   create SEPARATE queue for EACH Service to communicate for it's appropriate (IMPLEMENTATION) class */
 		LOGGER.info("About to createCategoryService...");
-		CategoryService.createCategoryService(pgClient, configuration, readyHandler -> {
-			if (readyHandler.succeeded()) {
+		
+		AuthorService.createAuthorService(pgClient, configuration, readyHandler -> {
+			if (readyHandler.succeeded()) {				
 				ServiceBinder binder = new ServiceBinder(vertx);
+				binder
+					.setAddress(CONFIG_AUTHOR_QUEUE)
+					.register(AuthorService.class, readyHandler.result());
+				startPromise.complete();
+			} else {
+				LOGGER.error("**********  Error, something failed in CREATING AuthorService!!!! **********");
+				startPromise.fail(readyHandler.cause());
+			}
+		});
+		
+		CategoryService.createCategoryService(pgClient, configuration, readyHandler -> {
+			if (readyHandler.succeeded()) {				
+				ServiceBinder binder = new ServiceBinder(vertx);
+				LOGGER.info("++++++++ setting address 'category.queue' for CategoryService... ++++++++");
 				binder
 					.setAddress(CONFIG_CATEGORY_QUEUE)
 					.register(CategoryService.class, readyHandler.result());
 				startPromise.complete();
 			} else {
-				LOGGER.error("**********  Error, something failed in CREATING CATEGORY SERVICE!!!! **********");
+				LOGGER.error("**********  Error, something failed in CREATING CategoryService!!!! **********");
 				startPromise.fail(readyHandler.cause());
 			}
 		});
-		LOGGER.info("Passed createCategoryService(..) !!!");
+		
+		BookService.createBookService(pgClient, configuration, readyHandler -> {
+			if (readyHandler.succeeded()) {
+				ServiceBinder binder = new ServiceBinder(vertx);
+				LOGGER.info("++++++++ setting address 'book.queue' for BookService... ++++++++");
+				binder
+					.setAddress(CONFIG_BOOK_QUEUE)
+					.register(BookService.class, readyHandler.result());
+				startPromise.complete();
+			} else {
+				LOGGER.error("**********  Error, something failed in CREATING BookService!!!! **********");
+				startPromise.fail(readyHandler.cause());
+			}
+		});
+		
+		OrderService.createOrderService(pgClient, configuration, readyHandler -> {
+			if (readyHandler.succeeded()) {
+				ServiceBinder binder = new ServiceBinder(vertx);
+				LOGGER.info("++++++++ setting address 'orders.queue' for OrderService... ++++++++");
+				binder
+					.setAddress(CONFIG_ORDERS_QUEUE)
+					.register(OrderService.class, readyHandler.result());
+				startPromise.complete();
+			} else {
+				LOGGER.error("**********  Error, something failed in CREATING OrderService!!!! **********");
+				startPromise.fail(readyHandler.cause());
+			}
+		});
+		
 	}		
 }

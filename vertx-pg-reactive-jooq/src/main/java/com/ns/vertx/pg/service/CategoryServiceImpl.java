@@ -28,22 +28,25 @@ public class CategoryServiceImpl implements CategoryService {
 	private static final Logger LOGGER = LoggerFactory.getLogger(CategoryServiceImpl.class);
 	
 	private ReactiveClassicGenericQueryExecutor queryExecutor;
-	private PgPool pgClient;
+	private final PgPool pgClient;
+	private final Configuration configuration;
 	
 	public CategoryServiceImpl(PgPool pgClient , Configuration configuration,
 			/*ReactiveClassicGenericQueryExecutor queryExecutor, */Handler<AsyncResult<CategoryService>> readyHandler){				
 		this.pgClient = pgClient;
-		this.pgClient.getConnection(ar -> {
+		this.configuration = configuration;
+		pgClient.getConnection(ar -> {
 			if (ar.failed()) {
 				LOGGER.error("Could NOT OPEN DB connection!" , ar.cause());
 				readyHandler.handle(Future.failedFuture(ar.cause()));
 			} else {
 				SqlConnection connection = ar.result();
-				connection.close();
-				readyHandler.handle(ar.mapEmpty());
+						
 				LOGGER.info("++++++++++++++++++++++ Connection succeded! ++++++++++++++++++++++");
-				this.queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
+				this.queryExecutor = new ReactiveClassicGenericQueryExecutor(this.configuration, this.pgClient);
 				LOGGER.info("++++++++++++++++++++++ queryExecutor instantiation is SUCCESSFUL! ++++++++++++++++++++++");
+				connection.close();		
+				readyHandler.handle(Future.succeededFuture(this));
 			}
 		});
 		LOGGER.info("Passed this.pgClient.getConnection(ar -> { part...");
@@ -77,7 +80,6 @@ public class CategoryServiceImpl implements CategoryService {
 	}
 		
 	
-	
 	public CategoryService getCategoryByIdJooqSP(Long id, Handler<AsyncResult<JsonObject>> resultHandler) {
 	    Future<Row> findOneCatFuture = queryExecutor.transaction(transactionQE -> {
 	    	return transactionQE.findOneRow(dsl -> dsl
@@ -90,10 +92,12 @@ public class CategoryServiceImpl implements CategoryService {
 					resultHandler.handle(Future.failedFuture((new NoSuchElementException("Error, no category found in DB for category_id = " + id))));
 				} else {
 					JsonObject categoryJO = fillCategory(res.result());
+					LOGGER.info("categoryJO.encodePrettily()" + categoryJO.encodePrettily());
 					resultHandler.handle(Future.succeededFuture(categoryJO));
 				}				
 			} else {
 				queryExecutor.rollback();
+				LOGGER.error("Error!!!! res.cause() = " + res.cause());
 				resultHandler.handle(Future.failedFuture(res.cause()));
 			}					
 		});
@@ -256,12 +260,10 @@ public class CategoryServiceImpl implements CategoryService {
 		});		
 		return promise.future();
 	}
-	
-	
+		
 	
 	public static Future<Void> deleteCategoryJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long id) {
-		Promise<Void> promise = Promise.promise();
-		
+		Promise<Void> promise = Promise.promise();		
 		Future<Void> findAndDeleteFuture = queryExecutor.beginTransaction().compose(transactionQE -> 
 			transactionQE.findOneRow(dsl -> dsl
 				.selectFrom(CATEGORY).where(CATEGORY.CATEGORY_ID.eq(Long.valueOf(id))))

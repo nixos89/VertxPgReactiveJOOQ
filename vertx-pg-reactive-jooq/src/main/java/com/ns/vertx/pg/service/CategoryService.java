@@ -19,7 +19,6 @@ public interface CategoryService {
 	@GenIgnore
 	static CategoryService createCategoryService(PgPool pgClient , Configuration configuration,
 			/*ReactiveClassicGenericQueryExecutor queryExecutor, */ Handler<AsyncResult<CategoryService>> readyHandler) {
-//		return new CategoryServiceImpl(pgClient, configuration, readyHandler);
 		return new CategoryServiceImpl(pgClient, configuration, readyHandler);
 	}
 	
