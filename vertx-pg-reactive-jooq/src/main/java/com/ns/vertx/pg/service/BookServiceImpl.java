@@ -34,34 +34,27 @@ import io.vertx.sqlclient.SqlConnection;
 
 public class BookServiceImpl implements BookService {
 	
-	private static final Logger LOGGER = LoggerFactory.getLogger(BookServiceImpl.class);
-	
+	private static final Logger LOGGER = LoggerFactory.getLogger(BookServiceImpl.class);	
 	private ReactiveClassicGenericQueryExecutor queryExecutor;
-	
-	
+		
 	public BookServiceImpl(PgPool pgClient, Configuration configuration, Handler<AsyncResult<BookService>> readyHandler) {
-		LOGGER.info("+++++++++ going to instantiate (ReactiveClassicGenericQueryExecutor) queryExecutor in BookServiceImpl! +++++++++");
 		pgClient.getConnection(ar -> {
 			if (ar.failed()) {
 				LOGGER.error("Could NOT OPEN DB connection!", ar.cause());
 				readyHandler.handle(Future.failedFuture(ar.cause()));
 			} else {
 				SqlConnection connection = ar.result();						
-				LOGGER.info("++++++++++++++++++++++ Connection succeded! ++++++++++++++++++++++");
 				this.queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
-				LOGGER.info("+++++++++ queryExecutor instantiation is SUCCESSFUL (in BookServiceImpl)! +++++++++");
+				LOGGER.info("+++++ Connection succeded and queryExecutor instantiation is SUCCESSFUL! +++++");
 				connection.close();		
 				readyHandler.handle(Future.succeededFuture(this));
 			}
 		});		
-//		this.queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
 	}		
-
-
-	// ************************************************************************************************
-	// ******************************* CategoryService CRUD methods *********************************** 
-	// ************************************************************************************************
 	
+	// ************************************************************************************************
+	// ******************************* BookService CRUD methods *********************************** 
+	// ************************************************************************************************	
 	@Override
 	public BookService getAllBooksJooqSP(Handler<AsyncResult<JsonObject>> resultHandler) {
 		Future<QueryResult> bookFuture = queryExecutor.transaction(transactionQE -> {			
@@ -246,9 +239,8 @@ public class BookServiceImpl implements BookService {
 		updateBookFuture.onFailure(handler -> resultHandler.handle(Future.failedFuture(handler)));		
 		return this;
 	}
-	
-	
-	// ***************************************************************************************************************
+		
+	// ***********************************************************************************************************************************************
 	
 	private Future<Void> iterateCategoryBook(ReactiveClassicGenericQueryExecutor queryExecutor, Set<Long> categoryUpdatedIds, long bookId) {
 		Promise<Void> promise = Promise.promise();				
@@ -349,9 +341,7 @@ public class BookServiceImpl implements BookService {
 		iterateABFuture.onFailure(handler -> {LOGGER.error("Error, iterateABFuture FAILED!"); promise.fail(handler);});
 		return promise.future();
 	}
-
 	
-	// TODO: maybe LEAVE out this method -> it's unnecessary since Book already contains 'is_deleted' field !	
 	@Override
 	public BookService deleteBookJooqSP(Long id, Handler<AsyncResult<Void>> resultHandler) {
 		Future<Integer> deleteBookFuture =  queryExecutor.transaction(transactionQE -> {

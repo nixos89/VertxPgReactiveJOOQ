@@ -1,17 +1,23 @@
-package com.ns.vertx.pg.converteres;
+package io.github.jklingsporn.vertx.jooq.generate.classic;
 
-/* NOTE - added for conversion of Timestamp to LocalDateTime by this suggestion: 
- 	https://github.com/jklingsporn/vertx-jooq/issues/134#issuecomment-593831035 */
-//TODO: implement CustomVertxGenerator class
-public class CustomVertxGenerator extends DelegatingVertxGenerator {
-	
-	// link at https://github.com/jklingsporn/vertx-jooq/blob/master/vertx-jooq-generate/src/test/java/io/github/jklingsporn/vertx/jooq/generate/custom/CustomVertxGenerator.java
-	
-	/*
-	public CustomVertxGenerator() {
-        super(VertxGeneratorBuilder.init().withClassicAPI().withJDBCDriver().build());
+import java.time.LocalDateTime;
+
+import org.jooq.codegen.JavaWriter;
+import org.jooq.meta.TypedElementDefinition;
+
+import io.github.jklingsporn.vertx.jooq.generate.builder.DelegatingVertxGenerator;
+import io.github.jklingsporn.vertx.jooq.generate.builder.VertxGeneratorBuilder;
+
+/**
+ * Created by jensklingsporn on 06.02.18.
+ */
+public class ClassicReactiveVertxGenerator extends DelegatingVertxGenerator {
+
+    public ClassicReactiveVertxGenerator() {
+        super(VertxGeneratorBuilder.init().withClassicAPI().withPostgresReactiveDriver().build());
     }
-
+    
+    // added by nixos89 on 11.06.2020.
     @Override
     protected boolean handleCustomTypeFromJson(TypedElementDefinition<?> column, String setter, String columnType, String javaMemberName, JavaWriter out) {
         if(isType(columnType, LocalDateTime.class)){
@@ -29,5 +35,6 @@ public class CustomVertxGenerator extends DelegatingVertxGenerator {
         }
         return super.handleCustomTypeToJson(column, getter, columnType, javaMemberName, out);
     }
-    */
+    
+    
 }

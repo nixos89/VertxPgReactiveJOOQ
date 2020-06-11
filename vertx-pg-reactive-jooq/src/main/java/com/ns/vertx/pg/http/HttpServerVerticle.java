@@ -48,7 +48,6 @@ public class HttpServerVerticle extends AbstractVerticle {
 		categoryService = CategoryService.createCategoryProxy(vertx, categoryAddress);
 		bookService = BookService.createBookProxy(vertx, bookAddress);
 		orderService = OrderService.createOrderProxy(vertx, orderAddress);
-		// TODO: uncomment + initialize (same uncommented) service instances
 		
 		Router routerREST = Router.router(vertx);
 		routerREST.post().handler(BodyHandler.create());
@@ -107,8 +106,7 @@ public class HttpServerVerticle extends AbstractVerticle {
 	// ********************* Author handler methods *********************
 	private void getAllAuthorsHandler(RoutingContext rc) {
 		authorService.getAllAuthorsJooqSP(ok(rc));
-	}	
-	
+	}		
 	
 	private void getAuthorByIdHandler(RoutingContext rc) {
 		Long id = Long.valueOf(rc.request().getParam("id"));

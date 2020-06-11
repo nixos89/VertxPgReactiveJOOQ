@@ -9,13 +9,10 @@ import org.jooq.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ns.vertx.pg.jooq.tables.pojos.Author;
-
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.pgclient.PgPool;
@@ -25,7 +22,6 @@ import io.vertx.sqlclient.SqlConnection;
 public class AuthorServiceImpl implements AuthorService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(AuthorServiceImpl.class);	
-	
 	private ReactiveClassicGenericQueryExecutor queryExecutor;
 	
 	public AuthorServiceImpl(PgPool pgClient, Configuration configuration, Handler<AsyncResult<AuthorService>> readyHandler) {
@@ -35,11 +31,9 @@ public class AuthorServiceImpl implements AuthorService {
 				LOGGER.error("Could NOT OPEN DB connection!" , ar.cause());
 				readyHandler.handle(Future.failedFuture(ar.cause()));
 			} else {
-				SqlConnection connection = ar.result();
-						
-				LOGGER.info("++++++++++++++++++++++ Connection succeded! ++++++++++++++++++++++");
+				SqlConnection connection = ar.result();						
 				this.queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
-				LOGGER.info("++++++++++++++++++++++ queryExecutor instantiation is SUCCESSFUL! ++++++++++++++++++++++");
+				LOGGER.info("+++++ Connection succeded and queryExecutor instantiation is SUCCESSFUL! +++++");
 				connection.close();		
 				readyHandler.handle(Future.succeededFuture(this));
 			}
@@ -47,115 +41,6 @@ public class AuthorServiceImpl implements AuthorService {
 		
 		this.queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
 		LOGGER.info("+++++++++ queryExecutor instantiation is SUCCESSFUL (in AuthorServiceImpl)! +++++++++");
-	}
-	
-	// ************************************************************************************************
-	// ******************************* static Future<T> CRUD methods ********************************** 
-	// ************************************************************************************************
-
-	public static Future<JsonObject> getAllAuthorsJooq(ReactiveClassicGenericQueryExecutor queryExecutor) {
-		Promise<JsonObject> finalRes = Promise.promise();					
-		Future<List<Row>> bookFuture = queryExecutor.transaction(qe -> {			
-			return qe.findManyRow(dsl -> dsl.select(AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME)
-				.from(AUTHOR).orderBy(AUTHOR.AUTHOR_ID.asc()));
-		});						
-	    bookFuture.onComplete(handler -> {
-			if (handler.succeeded()) {								
-				List<Row> authorsLR = handler.result();				
-				JsonObject authorsJsonObject = extractAuthorsFromLR(authorsLR);
-				finalRes.complete(authorsJsonObject);
-	    	} else {
-	    		LOGGER.error("Error, something failed in retrivening ALL authors! Cause: " 
-	    				+ handler.cause().getMessage());
-	    		queryExecutor.rollback();
-	    		finalRes.fail(handler.cause());
-	    	}
-	    }); 		
-		return finalRes.future();
-	}
-	
-	
-	public static Future<JsonObject> getAuthorByIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, Long authorId) {
-		Promise<JsonObject> finalRes = Promise.promise();					
-		Future<Row> bookFuture = queryExecutor.transaction(qe -> {			
-			return qe.findOneRow(dsl -> dsl
-				.select(AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME)
-				.from(AUTHOR).where(AUTHOR.AUTHOR_ID.eq(authorId)));
-		});				
-		
-	    bookFuture.onComplete(handler -> {
-			if (handler.succeeded()) {										
-				if (handler.result() == null) {
-					finalRes.handle(Future.failedFuture(new NoSuchElementException("No author with id = " + authorId)));				
-				} else {
-					JsonObject authorJsonObject = fillAuthor(handler.result());
-					finalRes.complete(authorJsonObject);
-				}				
-	    	} else {
-				LOGGER.error("Error, something failed in retrivening author by id " + authorId 
-						+ " ! Cause: " + handler.cause().getMessage());
-	    		queryExecutor.rollback();
-	    		finalRes.fail(handler.cause());
-	    	}
-	    }); 
-		
-		return finalRes.future();
-	}
-	
-	
-	public static Future<Void> createAuthorJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
-			String firstName, String lastName) {		
-		Promise<Void> promise = Promise.promise();			
-		Future<Integer> retVal = queryExecutor.transaction(qe ->
-			qe.execute(dsl -> dsl
-				.insertInto(AUTHOR, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME)
-				.values(firstName, lastName)
-				.returningResult(AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME))
-		);
-		
-		retVal.onComplete(ar -> promise.complete());
-		retVal.onFailure(ar -> promise.fail(ar));			
-		return promise.future();
-	}	
-	
-
-	public static Future<Void> updateAuthorJooq(ReactiveClassicGenericQueryExecutor queryExecutor, Author authorPojo) {
-		Promise<Void> promise = Promise.promise();												
-		
-		Future<Integer> retVal = queryExecutor.transaction(qe -> {				
-			return qe.execute(dsl -> dsl
-				.update(AUTHOR)
-				.set(AUTHOR.FIRST_NAME, authorPojo.getFirstName())
-				.set(AUTHOR.LAST_NAME, authorPojo.getLastName())
-				.where(AUTHOR.AUTHOR_ID.eq(authorPojo.getAuthorId()))				
-			);
-		});		
-		retVal.onComplete(ar -> promise.handle(Future.succeededFuture()));
-		retVal.onFailure(handler -> {
-			LOGGER.error("Error, something went wrong! Cause:\n" + handler.getStackTrace());
-			promise.handle(Future.failedFuture(new NoSuchElementException("Error, author has not been updated for id = "
-					+ authorPojo.getAuthorId() + "! Cause: " + handler)));
-		});		
-		return promise.future();
-	}
-	
-	
-	public static Future<Void> deleteAuthorJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long id) {
-		Promise<Void> promise = Promise.promise();
-		Future<Integer> deleteAuthorFuture = queryExecutor.transaction(qe -> {
-			return qe.execute(dsl -> dsl
-				.delete(AUTHOR)
-				.where(AUTHOR.AUTHOR_ID.eq(Long.valueOf(id))));
-		});		
-		deleteAuthorFuture.onComplete(ar -> {
-			if(ar.succeeded()) {
-				promise.handle(Future.succeededFuture());
-			} else {
-				queryExecutor.rollback();
-				promise.handle(Future.failedFuture(new NoSuchElementException("No author with id = " + id)));
-			}
-		});		
-		return promise.future();
 	}
 	
 	// ************************************************************************************************

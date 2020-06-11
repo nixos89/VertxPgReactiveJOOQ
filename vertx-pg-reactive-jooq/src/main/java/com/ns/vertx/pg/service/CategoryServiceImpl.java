@@ -9,13 +9,10 @@ import org.jooq.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ns.vertx.pg.jooq.tables.pojos.Category;
-
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.pgclient.PgPool;
@@ -25,32 +22,22 @@ import io.vertx.sqlclient.SqlConnection;
 
 public class CategoryServiceImpl implements CategoryService {
 		
-	private static final Logger LOGGER = LoggerFactory.getLogger(CategoryServiceImpl.class);
-	
+	private static final Logger LOGGER = LoggerFactory.getLogger(CategoryServiceImpl.class);	
 	private ReactiveClassicGenericQueryExecutor queryExecutor;
-	private final PgPool pgClient;
-	private final Configuration configuration;
 	
-	public CategoryServiceImpl(PgPool pgClient , Configuration configuration,
-			/*ReactiveClassicGenericQueryExecutor queryExecutor, */Handler<AsyncResult<CategoryService>> readyHandler){				
-		this.pgClient = pgClient;
-		this.configuration = configuration;
+	public CategoryServiceImpl(PgPool pgClient , Configuration configuration, Handler<AsyncResult<CategoryService>> readyHandler){				
 		pgClient.getConnection(ar -> {
 			if (ar.failed()) {
 				LOGGER.error("Could NOT OPEN DB connection!" , ar.cause());
 				readyHandler.handle(Future.failedFuture(ar.cause()));
 			} else {
-				SqlConnection connection = ar.result();
-						
-				LOGGER.info("++++++++++++++++++++++ Connection succeded! ++++++++++++++++++++++");
-				this.queryExecutor = new ReactiveClassicGenericQueryExecutor(this.configuration, this.pgClient);
-				LOGGER.info("++++++++++++++++++++++ queryExecutor instantiation is SUCCESSFUL! ++++++++++++++++++++++");
+				SqlConnection connection = ar.result();						
+				this.queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
+				LOGGER.info("+++++ Connection succeded and queryExecutor instantiation is SUCCESSFUL! +++++");
 				connection.close();		
 				readyHandler.handle(Future.succeededFuture(this));
 			}
-		});
-		LOGGER.info("Passed this.pgClient.getConnection(ar -> { part...");
-//		this.queryExecutor = queryExecutor;		
+		});	
 	}
 	
 	// ************************************************************************************************
@@ -69,7 +56,7 @@ public class CategoryServiceImpl implements CategoryService {
 			if (ar.succeeded()) {
 				List<Row> rowList = ar.result();				
 				JsonObject categoriesFinal = convertListOfRowsToJO(rowList);
-				LOGGER.info("All Categories:\n" + categoriesFinal.encodePrettily());
+//				LOGGER.info("All Categories:\n" + categoriesFinal.encodePrettily());
 				resultHandler.handle(Future.succeededFuture(categoriesFinal));
 			} else {
 				queryExecutor.rollback();
@@ -92,7 +79,7 @@ public class CategoryServiceImpl implements CategoryService {
 					resultHandler.handle(Future.failedFuture((new NoSuchElementException("Error, no category found in DB for category_id = " + id))));
 				} else {
 					JsonObject categoryJO = fillCategory(res.result());
-					LOGGER.info("categoryJO.encodePrettily()" + categoryJO.encodePrettily());
+//					LOGGER.info("categoryJO.encodePrettily()" + categoryJO.encodePrettily());
 					resultHandler.handle(Future.succeededFuture(categoryJO));
 				}				
 			} else {
@@ -132,7 +119,7 @@ public class CategoryServiceImpl implements CategoryService {
 			);
 		});		
 		retVal.onSuccess(handler -> {
-			LOGGER.info("Succeded in UPDATING Category = " + categoryJO.encodePrettily());
+//			LOGGER.info("Succeded in UPDATING Category = " + categoryJO.encodePrettily());
 			resultHandler.handle(Future.succeededFuture());});		
 		retVal.onFailure(handler -> {
 			queryExecutor.rollback();
@@ -151,7 +138,7 @@ public class CategoryServiceImpl implements CategoryService {
 				.selectFrom(CATEGORY).where(CATEGORY.CATEGORY_ID.eq(Long.valueOf(id))))
 			.compose(searchedCat -> {					
 				if(searchedCat == null) {					
-					LOGGER.info("No category_id = " + id + " found in DB!");
+//					LOGGER.info("No category_id = " + id + " found in DB!");
 					resultHandler.handle(Future.failedFuture(
 							new NoSuchElementException("Error, no category_id = " + id + " found in DB!")));
 					return transactionQE.rollback(); 
@@ -160,10 +147,10 @@ public class CategoryServiceImpl implements CategoryService {
 						.delete(CATEGORY)
 						.where(CATEGORY.CATEGORY_ID.eq(Long.valueOf(id))))
 					.compose(success -> {
-						LOGGER.info("Commiting transaction ...");
+//						LOGGER.info("Commiting transaction ...");
 						return transactionQE.commit();	
 					}, failure -> {
-						LOGGER.info("Nooooo, rolling-back transcation...");
+						LOGGER.debug("Nooooo, rolling-back transcation...");
 						return transactionQE.rollback();
 					});
 				}					
@@ -175,123 +162,6 @@ public class CategoryServiceImpl implements CategoryService {
 			resultHandler.handle(Future.failedFuture(ar));
 		});	
 		return this;
-	}
-	
-	// ************************************************************************************************
-	// ******************************* static Future<T> CRUD methods ********************************** 
-	// ************************************************************************************************
-	
-	public static Future<JsonObject> getAllCategoriesJooq(ReactiveClassicGenericQueryExecutor queryExecutor) {
-		Promise<JsonObject> finalRes = Promise.promise();
-		Future<List<Row>> queryRes = queryExecutor.transaction(transactionQE -> {						
-			return transactionQE.findManyRow(dsl -> dsl
-					.selectFrom(CATEGORY)
-					.orderBy(CATEGORY.CATEGORY_ID.asc())
-			);
-		});		
-		queryRes.onComplete(ar-> {
-			if (ar.succeeded()) {
-				List<Row> rowList = ar.result();				
-				JsonObject categoriesFinal = convertListOfRowsToJO(rowList);
-				LOGGER.info("All Categories:\n" + categoriesFinal.encodePrettily());
-				finalRes.complete(categoriesFinal);
-			} else {
-				queryExecutor.rollback();
-				finalRes.fail(ar.cause());
-			}
-		});		
-		return finalRes.future();
-	}
-		
-	public static Future<JsonObject> getCategoryByIdJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long id) {
-		Promise<JsonObject> finalRes = Promise.promise();
-	    Future<Row> findOneCatFuture = queryExecutor.transaction(transactionQE -> {
-	    	return transactionQE.findOneRow(dsl -> dsl
-		    		.selectFrom(CATEGORY)
-		    		.where(CATEGORY.CATEGORY_ID.eq(Long.valueOf(id))));	    	
-	    }); 	    
-		findOneCatFuture.onComplete(handler -> {
-			if(handler.succeeded()) {
-				if(handler.result() == null) {
-					finalRes.fail(new NoSuchElementException("Error, no category found in DB for category_id = " + id));
-				} else {
-					JsonObject categoryJO = fillCategory(handler.result());
-					finalRes.complete(categoryJO);
-				}				
-			} else {
-				queryExecutor.rollback();
-				finalRes.fail(handler.cause());
-			}					
-		});
-		return finalRes.future();
-	}	
-	
-	public static Future<Void> createCategoryJooq(ReactiveClassicGenericQueryExecutor queryExecutor,
-			String name, boolean isDeleted) {		
-		Promise<Void> promise = Promise.promise();			
-		Future<Integer> retVal = queryExecutor.transaction(transactionQE -> {
-			return transactionQE.execute(dsl -> dsl
-					.insertInto(CATEGORY, CATEGORY.NAME, CATEGORY.IS_DELETED)
-					.values(name, isDeleted));
-		});		
-		retVal.onSuccess(ar -> promise.complete());
-		retVal.onFailure(handler -> {
-			queryExecutor.rollback();
-			promise.fail(handler);
-		});
-		return promise.future();
-	}	
-	
-	public static Future<Void> updateCategoryJooq(ReactiveClassicGenericQueryExecutor queryExecutor, Category categoryPOJO) {
-		Promise<Void> promise = Promise.promise();									
-		Future<Integer> retVal = queryExecutor.transaction(transactionQE ->{						
-			return transactionQE.execute(dsl -> dsl.update(CATEGORY)
-				.set(CATEGORY.NAME, categoryPOJO.getName())
-				.set(CATEGORY.IS_DELETED, categoryPOJO.getIsDeleted())
-				.where(CATEGORY.CATEGORY_ID.eq(categoryPOJO.getCategoryId()))
-			);
-		});		
-		retVal.onSuccess(handler -> promise.complete());		
-		retVal.onFailure(handler -> {
-			queryExecutor.rollback();
-			promise.handle(Future.failedFuture(
-				new NoSuchElementException("Error, category has not been updated for id = " + categoryPOJO.getCategoryId() 
-					+ ". Cause: " + retVal.cause().getStackTrace())));
-		});		
-		return promise.future();
-	}
-		
-	
-	public static Future<Void> deleteCategoryJooq(ReactiveClassicGenericQueryExecutor queryExecutor, long id) {
-		Promise<Void> promise = Promise.promise();		
-		Future<Void> findAndDeleteFuture = queryExecutor.beginTransaction().compose(transactionQE -> 
-			transactionQE.findOneRow(dsl -> dsl
-				.selectFrom(CATEGORY).where(CATEGORY.CATEGORY_ID.eq(Long.valueOf(id))))
-			.compose(searchedCat -> {					
-				if(searchedCat == null) {					
-					LOGGER.info("No category_id = " + id + " found in DB!");
-					promise.fail(new NoSuchElementException("Error, no category_id = " + id + " found in DB!"));
-					return transactionQE.rollback(); 
-				} else {
-					return transactionQE.execute(dsl -> dsl
-						.delete(CATEGORY)
-						.where(CATEGORY.CATEGORY_ID.eq(Long.valueOf(id))))
-					.compose(success -> {
-						LOGGER.info("Commiting transaction ...");
-						return transactionQE.commit();	
-					}, failure -> {
-						LOGGER.info("Nooooo, rolling-back transcation...");
-						return transactionQE.rollback();
-					});
-				}					
-			})	    	
-	    ); 				
-		findAndDeleteFuture.onSuccess(ar -> promise.complete());
-		findAndDeleteFuture.onFailure(ar -> {
-			LOGGER.error("Error, something went WRONG in searching and deleting category by ID!");
-			promise.fail(ar);
-		});	
-		return promise.future();
 	}
 	
 	

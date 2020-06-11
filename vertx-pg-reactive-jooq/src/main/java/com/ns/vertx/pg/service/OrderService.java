@@ -26,8 +26,7 @@ public interface OrderService {
 	static OrderService createOrderProxy(Vertx vertx, String address) {
 		return new OrderServiceVertxEBProxy(vertx, address);
 	}
-	
-	
+		
 	@Fluent
 	OrderService getAllOrdersJooqSP(Handler<AsyncResult<JsonObject>> resultHandler);
 		
