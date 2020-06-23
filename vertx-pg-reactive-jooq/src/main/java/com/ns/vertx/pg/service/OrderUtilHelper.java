@@ -93,10 +93,9 @@ public class OrderUtilHelper {
 		JsonArray bookJA = new JsonArray();
 		LOGGER.info("entering FOR-loop in extractOrdersFromLR()...");
 		for (Row row : ordersLR) {
-			JsonObject orderJO = new JsonObject();	
-//			row.getLocalDateTime("order_date");
+			JsonObject orderJO = new JsonObject();				
 			orderJO.put("order_id", row.getLong("order_id"));
-			orderJO.put("order_date", row.getString("order_date"));			
+			orderJO.put("order_date", row.getLocalDateTime("order_date").toString());			
 			orderJO.put("username", row.getString("username"));
 			orderJO.put("amount", row.getInteger("amount"));
 			// TODO: finish iteration throught for-loop of 'extractOrdersFromLR()' method
@@ -269,5 +268,8 @@ public class OrderUtilHelper {
 		return ordersJOFinal;
 	}
 	
-	
+		
+	// TODO: 001-implement HERE necessary helper methods for USER-DEFINED proecedures in jOOQ-fied PostgreSQL for getAllOrders() method
+
+
 }

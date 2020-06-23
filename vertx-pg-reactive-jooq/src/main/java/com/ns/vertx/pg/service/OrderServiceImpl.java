@@ -50,7 +50,6 @@ public class OrderServiceImpl implements OrderService {
 	private ReactiveClassicGenericQueryExecutor queryExecutor;
 	
 	public OrderServiceImpl(PgPool pgClient, Configuration configuration, Handler<AsyncResult<OrderService>> readyHandler) {
-		LOGGER.info("+++++++++ going to instantiate (ReactiveClassicGenericQueryExecutor) queryExecutor in OrderServiceImpl! +++++++++");
 		pgClient.getConnection(ar -> {
 			if (ar.failed()) {
 				LOGGER.error("Could NOT OPEN DB connection!" , ar.cause());
@@ -65,11 +64,15 @@ public class OrderServiceImpl implements OrderService {
 		});	
 	}	
 	
-	// ************************************************************************************************
-	// ******************************* OrderService CRUD methods ************************************** 
-	// ************************************************************************************************
+	// ********************************************************************************************************************************
+	// *********************************************** OrderService CRUD methods ****************************************************** 
+	// ********************************************************************************************************************************
 	@Override
 	public OrderService getAllOrdersJooqSP(Handler<AsyncResult<JsonObject>> resultHandler) {
+		/* FIXME:001-edit this c0de by transforming created PL/pgSQL functions into jOOQs' user-defined functions from:
+			  @ https://www.jooq.org/doc/3.13/manual/sql-building/column-expressions/user-defined-functions/
+			  @ https://www.jooq.org/doc/3.13/manual/sql-building/column-expressions/user-defined-aggregate-functions/
+		*/
 		Future<List<Row>> ordersFuture = queryExecutor.transaction(qe -> qe
 				.findManyRow(dsl -> dsl
 					.select(ORDERS.ORDER_ID, ORDERS.ORDER_DATE, ORDERS.TOTAL, USERS.USERNAME, ORDER_ITEM.AMOUNT,						

@@ -311,6 +311,7 @@
 						</target>
 						<generate>
 							<interfaces>true</interfaces>
+							<routines>true</routines>
 							<daos>true</daos>
 							<fluentSetters>true</fluentSetters>
 <!-- 							<javaTimeTypes>true</javaTimeTypes> added because of Timestamp type for order_date field -->
