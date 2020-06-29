@@ -6,9 +6,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.jooq.JSON;
+import org.jooq.tools.json.JSONArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ns.vertx.pg.converters.JooqJsonToVertxJsonArrayConverter;
 import com.ns.vertx.pg.jooq.tables.pojos.Orders;
 import com.ns.vertx.pg.jooq.tables.pojos.Users;
 
@@ -268,8 +271,51 @@ public class OrderUtilHelper {
 		return ordersJOFinal;
 	}
 	
-		
-	// TODO: 001-implement HERE necessary helper methods for USER-DEFINED proecedures in jOOQ-fied PostgreSQL for getAllOrders() method
+	public static JsonObject convertGetAllOrdersQRToJsonObject_Old(QueryResult qr) {
+		JsonArray ordersJA = qr.get("orders", JsonArray.class);
+//		JsonObject orders = qr.get("orders", JsonObject.class);		
+//		DataType<JsonArray> jsonArrayType = SQLDataType.JSON.asConvertedDataType(new JsonArrayConverter());
+//		JSON jooqJson = qr.get("orders", JSON.class);
+//		JsonObject ordersJOFromJooqJson = new JsonObject().put("result", jooqJson.toString());
+//		String strJson = qr.get("orders", String.class);
+//		JsonObject convertedStrJson = new JsonObjectConverter().from(strJson);
 
+//		DataType<JsonObject> jsonObjectType = SQLDataType.JSON.asConvertedDataType(new JSONJsonObjectConverter());
+//		DataType<JsonObject> jsonObjectTypeDefault = SQLDataType.JSON.asConvertedDataType((Binding<? super JSON, JsonObject>) new JsonObjectConverter());
+
+//		Field<JsonObject> ordersFieldDefault = DSL.field("get_all_orders", jsonObjectTypeDefault);
+//		Field<JsonObject> ordersField = DSL.field("get_all_orders", jsonObjectType);
+		
+		return new JsonObject().put("orders", ordersJA); // TODO: CHANGE input-value of final result
+	}
+	
+	public static JsonObject convertGetAllOrdersQRToJsonObject(QueryResult qr) {
+		JsonObject finalRes2 = new JsonObject();
+		LOGGER.info("qr.hasResults() = " + qr.hasResults());
+		LOGGER.info("qr.get(\"orders\", JSON.class) = " + qr.get("orders", JSON.class));
+		JsonArray newConverterJA = new JooqJsonToVertxJsonArrayConverter().from(qr.get("orders", JSON.class));
+		for (QueryResult qRes: qr.asList()) {			
+			LOGGER.info("qRes.toString() = " + qRes.toString());
+			LOGGER.info("qRes.get(\"orders\", JSON.class) = " + qRes.get("orders", JSON.class));
+			LOGGER.info("qRes.get(\"orders\", JSONArray.class) = " + qRes.get("orders", JSONArray.class));
+			LOGGER.info("qRes.get(\"orders\", JsonArray.class) = " + qRes.get("orders", JsonArray.class));
+			LOGGER.info("qRes.get(\"orders\", String.class) = " + qRes.get("orders", String.class));
+			LOGGER.info("qRes.get(\"orders\", JsonObject.class) = " + qRes.get("orders", JsonObject.class));
+			JsonArray val1 = qRes.get("orders", JsonArray.class);
+			finalRes2.put("orders", val1);
+		}				
+		LOGGER.info("newConverterJA.encodePrettily() = \n" + newConverterJA.encodePrettily());
+		LOGGER.info("finalRes2.encodePrettily() = \n" + finalRes2.encodePrettily());
+		LOGGER.info("Moving on...");
+		return new JsonObject().put("orders", newConverterJA);
+	}
+	
+	
+	public static JsonObject extractJOFromRow(Row row) {
+		String[] ordersStr = row.getStringArray("orders");
+		LOGGER.info("ordersStr = " + ordersStr);		
+		return new JsonObject().put("orders", ordersStr);
+	}
+		
 
 }

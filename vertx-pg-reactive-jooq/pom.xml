@@ -252,12 +252,6 @@
 						<password>postgres</password>
 					</jdbc>
 
-<!-- 					Adding new generator for being able to access JavaGenerator class -->
-<!-- 					<generator> -->
-<!-- 					TODO: include plain jOOQ Code generator in order to be able to extend JavaGenerator class -->
-<!-- 						<name>org.jooq.codegen.JavaGenerator</name> -->
-<!-- 					</generator> -->
-
 					<!-- Generator parameters -->
 					<generator>
 						<!-- The default code generator. You can override this one, to generate your own code style.
@@ -300,6 +294,59 @@
 									<nullability>ALL</nullability>
 									<objectType>ALL</objectType>
 								</forcedType>
+												
+								<!-- works properly -->																	
+								<forcedType>
+									<userType>java.lang.String</userType> 
+									<converter>
+										org.jooq.Converter.ofNullable(org.jooq.JSON.class, String.class, Object::toString, org.jooq.JSON::valueOf)
+									</converter>	
+									<includeExpression>(?i:get_all_orders|return_value)</includeExpression>
+									<includeTypes>.*</includeTypes>
+								</forcedType>
+								
+								<!-- testing out DIRECT conversion to JsonArray/JsonObject type => current (commented-out) one does NOT work!!! -->
+<!-- 								<forcedType> -->
+<!-- 									<userType>java.lang.String</userType>  -->
+<!-- 									<converter> -->
+<!-- 										org.jooq.Converter.ofNullable(io.vertx.core.json.JsonObject.class, String.class, Object::toString, io.vertx.core.json.JsonObject::new) -->
+<!-- 									</converter>	 -->
+<!-- 									<includeExpression>(?i:get_all_orders|return_value)</includeExpression> -->
+<!-- 									<includeTypes>.*</includeTypes> -->
+<!-- 								</forcedType> -->								
+								
+								<forcedType>
+									<userType>java.lang.String</userType> 
+									<converter>
+										org.jooq.Converter.ofNullable(org.jooq.JSON.class, String.class, Object::toString, org.jooq.JSON::valueOf)
+									</converter>	
+									<includeExpression>(?i:get_book_by_book_id|return_value)</includeExpression>
+								</forcedType>
+								
+								<forcedType>
+									<userType>java.lang.String</userType> 
+									<converter>
+										org.jooq.Converter.ofNullable(java.lang.Long.class, String.class, Object::toString, java.lang.Long::valueOf)
+									</converter>	
+									<includeExpression>(?i:get_book_by_book_id\.b_id)</includeExpression>
+								</forcedType>
+																
+								<forcedType>
+									<userType>java.lang.String</userType> 
+									<converter>
+										org.jooq.Converter.ofNullable(org.jooq.JSON.class, String.class, Object::toString, org.jooq.JSON::valueOf)
+									</converter>	
+									<includeExpression>(?i:get_order_by_order_id|return_value)</includeExpression>
+								</forcedType>
+								
+								<forcedType>
+									<userType>java.lang.String</userType> 
+									<converter>
+										org.jooq.Converter.ofNullable(java.lang.Long.class, String.class, Object::toString, java.lang.Long::valueOf)
+									</converter>	
+									<includeExpression>(?i:get_order_by_order_id\.o_id)</includeExpression>
+								</forcedType>								
+																
 							</forcedTypes>
 							<dateAsTimestamp>true</dateAsTimestamp>
 							<recordTimestampFields>REC_TIMESTAMP</recordTimestampFields>							

@@ -31,11 +31,13 @@ import org.jooq.impl.TimestampToLocalDateTimeConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ns.vertx.pg.jooq.Routines;
 import com.ns.vertx.pg.jooq.tables.pojos.Book;
 import com.ns.vertx.pg.jooq.tables.pojos.Orders;
 import com.ns.vertx.pg.jooq.tables.pojos.Users;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
+import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -67,29 +69,57 @@ public class OrderServiceImpl implements OrderService {
 	// ********************************************************************************************************************************
 	// *********************************************** OrderService CRUD methods ****************************************************** 
 	// ********************************************************************************************************************************
+	
 	@Override
 	public OrderService getAllOrdersJooqSP(Handler<AsyncResult<JsonObject>> resultHandler) {
-		/* FIXME:001-edit this c0de by transforming created PL/pgSQL functions into jOOQs' user-defined functions from:
-			  @ https://www.jooq.org/doc/3.13/manual/sql-building/column-expressions/user-defined-functions/
-			  @ https://www.jooq.org/doc/3.13/manual/sql-building/column-expressions/user-defined-aggregate-functions/
-		*/
+//		Future<QueryResult> ordersFuture = queryExecutor.transaction(qe -> qe
+//				// FIXME: try out executeAny() or findOneRow() method instead of query() !!!!
+//			.query(dsl -> dsl
+//				.select(Routines.getAllOrders()) 
+//		));
+		
+		Future<Row> ordersFuture = queryExecutor.transaction(qe -> qe
+			.findOneRow(dsl -> dsl
+				.select(Routines.getAllOrders()) 
+		));	    	
+		LOGGER.info("Passed ordersFuture...");
+	    ordersFuture.onComplete(handler -> {
+			if (handler.succeeded()) {								
+//				QueryResult qRes = handler.result();					
+//				JsonObject ordersJsonObject = OrderUtilHelper.convertGetAllOrdersQRToJsonObject(qRes);
+				JsonObject ordersJsonObject = OrderUtilHelper.extractJOFromRow(handler.result());
+				LOGGER.info("ordersJsonObject.encodePrettily(): " + ordersJsonObject.encodePrettily());
+				resultHandler.handle(Future.succeededFuture(ordersJsonObject));
+	    	} else {
+	    		LOGGER.error("Error, something failed in retrivening ALL orders! handler.cause() = " + handler.cause());
+	    		queryExecutor.rollback();	    		
+	    		resultHandler.handle(Future.failedFuture(handler.cause()));
+	    	}
+	    }); 		
+		return this;
+	}
+	
+	
+	/*
+	@Override
+	public OrderService getAllOrdersJooqSP(Handler<AsyncResult<JsonObject>> resultHandler) {		
 		Future<List<Row>> ordersFuture = queryExecutor.transaction(qe -> qe
 				.findManyRow(dsl -> dsl
-					.select(ORDERS.ORDER_ID, ORDERS.ORDER_DATE, ORDERS.TOTAL, USERS.USERNAME, ORDER_ITEM.AMOUNT,						
-							DSL.field( "to_json(array_agg(DISTINCT {0}.*))", JSON.class, AUTHOR).as("authors"),
-							DSL.field("to_json(array_agg(DISTINCT {0}.*))", JSON.class, CATEGORY).as("categories"),
-							BOOK.TITLE, BOOK.PRICE)
-					.from(ORDERS).leftJoin(ORDER_ITEM).on(ORDERS.ORDER_ID.eq(ORDER_ITEM.ORDER_ID))
-					.leftJoin(USERS).on(ORDERS.USER_ID.eq(USERS.USER_ID))
-					.leftJoin(BOOK).on(ORDER_ITEM.BOOK_ID.eq(BOOK.BOOK_ID))
-					.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
-					.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
-					.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
-					.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
-					.groupBy(ORDERS.ORDER_ID, USERS.USERNAME, ORDER_ITEM.AMOUNT, BOOK.TITLE, BOOK.PRICE, 
-							 AUTHOR.AUTHOR_ID, CATEGORY.CATEGORY_ID)
-					.orderBy(ORDERS.ORDER_ID.asc())
-			));	    				
+						.select(ORDERS.ORDER_ID, ORDERS.ORDER_DATE, ORDERS.TOTAL, USERS.USERNAME, ORDER_ITEM.AMOUNT,						
+								DSL.field( "to_json(array_agg(DISTINCT {0}.*))", JSON.class, AUTHOR).as("authors"),
+								DSL.field("to_json(array_agg(DISTINCT {0}.*))", JSON.class, CATEGORY).as("categories"),
+								BOOK.TITLE, BOOK.PRICE)
+						.from(ORDERS).leftJoin(ORDER_ITEM).on(ORDERS.ORDER_ID.eq(ORDER_ITEM.ORDER_ID))
+						.leftJoin(USERS).on(ORDERS.USER_ID.eq(USERS.USER_ID))
+						.leftJoin(BOOK).on(ORDER_ITEM.BOOK_ID.eq(BOOK.BOOK_ID))
+						.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
+						.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
+						.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
+						.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
+						.groupBy(ORDERS.ORDER_ID, USERS.USERNAME, ORDER_ITEM.AMOUNT, BOOK.TITLE, BOOK.PRICE, 
+								 AUTHOR.AUTHOR_ID, CATEGORY.CATEGORY_ID)
+						.orderBy(ORDERS.ORDER_ID.asc())
+				));	    				
 			LOGGER.info("Passed ordersFuture...");
 		    ordersFuture.onComplete(handler -> {
 				if (handler.succeeded()) {								
@@ -104,7 +134,7 @@ public class OrderServiceImpl implements OrderService {
 		    	}
 		    }); 		
 		return this;
-	}
+	}*/
 
 
 	@SuppressWarnings("unchecked")

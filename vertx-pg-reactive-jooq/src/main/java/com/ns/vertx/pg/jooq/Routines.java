@@ -7,16 +7,9 @@ package com.ns.vertx.pg.jooq;
 import com.ns.vertx.pg.jooq.routines.GetAllOrders;
 import com.ns.vertx.pg.jooq.routines.GetBookByBookId;
 import com.ns.vertx.pg.jooq.routines.GetOrderByOrderId;
-import com.ns.vertx.pg.jooq.routines.GetOrderByOrderId2;
-import com.ns.vertx.pg.jooq.routines.GetOrderByOrderId8;
-import com.ns.vertx.pg.jooq.routines.GetOrderByOrderIdak;
-import com.ns.vertx.pg.jooq.routines.GetOrderitemByOiId;
-import com.ns.vertx.pg.jooq.routines.GetOrderitemByOiId2;
-import com.ns.vertx.pg.jooq.routines.IterateOverOrderitemIds;
 
 import org.jooq.Configuration;
 import org.jooq.Field;
-import org.jooq.JSON;
 
 
 /**
@@ -28,7 +21,7 @@ public class Routines {
     /**
      * Call <code>public.get_all_orders</code>
      */
-    public static JSON getAllOrders(Configuration configuration) {
+    public static String getAllOrders(Configuration configuration) {
         GetAllOrders f = new GetAllOrders();
 
         f.execute(configuration);
@@ -38,7 +31,7 @@ public class Routines {
     /**
      * Get <code>public.get_all_orders</code> as a field.
      */
-    public static Field<JSON> getAllOrders() {
+    public static Field<String> getAllOrders() {
         GetAllOrders f = new GetAllOrders();
 
         return f.asField();
@@ -47,7 +40,7 @@ public class Routines {
     /**
      * Call <code>public.get_book_by_book_id</code>
      */
-    public static JSON getBookByBookId(Configuration configuration, Long bId) {
+    public static String getBookByBookId(Configuration configuration, String bId) {
         GetBookByBookId f = new GetBookByBookId();
         f.setBId(bId);
 
@@ -58,7 +51,7 @@ public class Routines {
     /**
      * Get <code>public.get_book_by_book_id</code> as a field.
      */
-    public static Field<JSON> getBookByBookId(Long bId) {
+    public static Field<String> getBookByBookId(String bId) {
         GetBookByBookId f = new GetBookByBookId();
         f.setBId(bId);
 
@@ -68,7 +61,7 @@ public class Routines {
     /**
      * Get <code>public.get_book_by_book_id</code> as a field.
      */
-    public static Field<JSON> getBookByBookId(Field<Long> bId) {
+    public static Field<String> getBookByBookId(Field<String> bId) {
         GetBookByBookId f = new GetBookByBookId();
         f.setBId(bId);
 
@@ -78,7 +71,7 @@ public class Routines {
     /**
      * Call <code>public.get_order_by_order_id</code>
      */
-    public static JSON getOrderByOrderId(Configuration configuration, Long oId) {
+    public static String getOrderByOrderId(Configuration configuration, String oId) {
         GetOrderByOrderId f = new GetOrderByOrderId();
         f.setOId(oId);
 
@@ -89,7 +82,7 @@ public class Routines {
     /**
      * Get <code>public.get_order_by_order_id</code> as a field.
      */
-    public static Field<JSON> getOrderByOrderId(Long oId) {
+    public static Field<String> getOrderByOrderId(String oId) {
         GetOrderByOrderId f = new GetOrderByOrderId();
         f.setOId(oId);
 
@@ -99,173 +92,8 @@ public class Routines {
     /**
      * Get <code>public.get_order_by_order_id</code> as a field.
      */
-    public static Field<JSON> getOrderByOrderId(Field<Long> oId) {
+    public static Field<String> getOrderByOrderId(Field<String> oId) {
         GetOrderByOrderId f = new GetOrderByOrderId();
-        f.setOId(oId);
-
-        return f.asField();
-    }
-
-    /**
-     * Call <code>public.get_order_by_order_id2</code>
-     */
-    public static JSON getOrderByOrderId2(Configuration configuration, Long oId) {
-        GetOrderByOrderId2 f = new GetOrderByOrderId2();
-        f.setOId(oId);
-
-        f.execute(configuration);
-        return f.getReturnValue();
-    }
-
-    /**
-     * Get <code>public.get_order_by_order_id2</code> as a field.
-     */
-    public static Field<JSON> getOrderByOrderId2(Long oId) {
-        GetOrderByOrderId2 f = new GetOrderByOrderId2();
-        f.setOId(oId);
-
-        return f.asField();
-    }
-
-    /**
-     * Get <code>public.get_order_by_order_id2</code> as a field.
-     */
-    public static Field<JSON> getOrderByOrderId2(Field<Long> oId) {
-        GetOrderByOrderId2 f = new GetOrderByOrderId2();
-        f.setOId(oId);
-
-        return f.asField();
-    }
-
-    /**
-     * Call <code>public.get_order_by_order_id8</code>
-     */
-    public static JSON getOrderByOrderId8(Configuration configuration, Long oId) {
-        GetOrderByOrderId8 f = new GetOrderByOrderId8();
-        f.setOId(oId);
-
-        f.execute(configuration);
-        return f.getReturnValue();
-    }
-
-    /**
-     * Get <code>public.get_order_by_order_id8</code> as a field.
-     */
-    public static Field<JSON> getOrderByOrderId8(Long oId) {
-        GetOrderByOrderId8 f = new GetOrderByOrderId8();
-        f.setOId(oId);
-
-        return f.asField();
-    }
-
-    /**
-     * Get <code>public.get_order_by_order_id8</code> as a field.
-     */
-    public static Field<JSON> getOrderByOrderId8(Field<Long> oId) {
-        GetOrderByOrderId8 f = new GetOrderByOrderId8();
-        f.setOId(oId);
-
-        return f.asField();
-    }
-
-    /**
-     * Call <code>public.get_order_by_order_idak</code>
-     */
-    public static JSON getOrderByOrderIdak(Configuration configuration, Long oId) {
-        GetOrderByOrderIdak f = new GetOrderByOrderIdak();
-        f.setOId(oId);
-
-        f.execute(configuration);
-        return f.getReturnValue();
-    }
-
-    /**
-     * Get <code>public.get_order_by_order_idak</code> as a field.
-     */
-    public static Field<JSON> getOrderByOrderIdak(Long oId) {
-        GetOrderByOrderIdak f = new GetOrderByOrderIdak();
-        f.setOId(oId);
-
-        return f.asField();
-    }
-
-    /**
-     * Get <code>public.get_order_by_order_idak</code> as a field.
-     */
-    public static Field<JSON> getOrderByOrderIdak(Field<Long> oId) {
-        GetOrderByOrderIdak f = new GetOrderByOrderIdak();
-        f.setOId(oId);
-
-        return f.asField();
-    }
-
-    /**
-     * Call <code>public.get_orderitem_by_oi_id</code>
-     */
-    public static JSON getOrderitemByOiId(Configuration configuration, Long oiId) {
-        GetOrderitemByOiId f = new GetOrderitemByOiId();
-        f.setOiId(oiId);
-
-        f.execute(configuration);
-        return f.getReturnValue();
-    }
-
-    /**
-     * Get <code>public.get_orderitem_by_oi_id</code> as a field.
-     */
-    public static Field<JSON> getOrderitemByOiId(Long oiId) {
-        GetOrderitemByOiId f = new GetOrderitemByOiId();
-        f.setOiId(oiId);
-
-        return f.asField();
-    }
-
-    /**
-     * Get <code>public.get_orderitem_by_oi_id</code> as a field.
-     */
-    public static Field<JSON> getOrderitemByOiId(Field<Long> oiId) {
-        GetOrderitemByOiId f = new GetOrderitemByOiId();
-        f.setOiId(oiId);
-
-        return f.asField();
-    }
-
-    /**
-     * Call <code>public.get_orderitem_by_oi_id2</code>
-     */
-    public static void getOrderitemByOiId2(Configuration configuration, Long oiId) {
-        GetOrderitemByOiId2 p = new GetOrderitemByOiId2();
-        p.setOiId(oiId);
-
-        p.execute(configuration);
-    }
-
-    /**
-     * Call <code>public.iterate_over_orderitem_ids</code>
-     */
-    public static JSON iterateOverOrderitemIds(Configuration configuration, Long oId) {
-        IterateOverOrderitemIds f = new IterateOverOrderitemIds();
-        f.setOId(oId);
-
-        f.execute(configuration);
-        return f.getReturnValue();
-    }
-
-    /**
-     * Get <code>public.iterate_over_orderitem_ids</code> as a field.
-     */
-    public static Field<JSON> iterateOverOrderitemIds(Long oId) {
-        IterateOverOrderitemIds f = new IterateOverOrderitemIds();
-        f.setOId(oId);
-
-        return f.asField();
-    }
-
-    /**
-     * Get <code>public.iterate_over_orderitem_ids</code> as a field.
-     */
-    public static Field<JSON> iterateOverOrderitemIds(Field<Long> oId) {
-        IterateOverOrderitemIds f = new IterateOverOrderitemIds();
         f.setOId(oId);
 
         return f.asField();

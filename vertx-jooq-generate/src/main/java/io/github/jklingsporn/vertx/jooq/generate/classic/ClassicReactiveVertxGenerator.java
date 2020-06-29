@@ -2,6 +2,7 @@ package io.github.jklingsporn.vertx.jooq.generate.classic;
 
 import java.time.LocalDateTime;
 
+import org.jooq.JSON;
 import org.jooq.codegen.JavaWriter;
 import org.jooq.meta.TypedElementDefinition;
 
@@ -24,12 +25,22 @@ public class ClassicReactiveVertxGenerator extends DelegatingVertxGenerator {
             out.tab(2).println("%s(json.getString(\"%s\")==null?null:LocalDateTime.parse(json.getString(\"%s\")));", setter, javaMemberName, javaMemberName);
             return true;
         }
+        // following if-statement additionally added to convert to org.jooq.JSON filed type
+        if(isType(columnType, JSON.class)){
+            out.tab(2).println("%s(json.getString(\"%s\")==null?null:JSON.parse(json.getString(\"%s\")));", setter, javaMemberName, javaMemberName);
+            return true;
+        }
         return super.handleCustomTypeFromJson(column, setter, columnType, javaMemberName, out);
     }
 
     @Override
     protected boolean handleCustomTypeToJson(TypedElementDefinition<?> column, String getter, String columnType, String javaMemberName, JavaWriter out) {
         if(isType(columnType, LocalDateTime.class)){
+            out.tab(2).println("json.put(\"%s\",%s()==null?null:%s().toString());", getJsonKeyName(column),getter,getter);
+            return true;
+        }
+        // following if-statement additionally added to convert to org.jooq.JSON filed type
+        if(isType(columnType, JSON.class)){
             out.tab(2).println("json.put(\"%s\",%s()==null?null:%s().toString());", getJsonKeyName(column),getter,getter);
             return true;
         }
