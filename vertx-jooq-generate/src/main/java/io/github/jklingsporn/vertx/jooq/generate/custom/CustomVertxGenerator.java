@@ -1,15 +1,19 @@
-package com.ns.vertx.pg.converteres;
+package io.github.jklingsporn.vertx.jooq.generate.custom;
 
-/* NOTE - added for conversion of Timestamp to LocalDateTime by this suggestion: 
- 	https://github.com/jklingsporn/vertx-jooq/issues/134#issuecomment-593831035 */
-//TODO: implement CustomVertxGenerator class
+import io.github.jklingsporn.vertx.jooq.generate.builder.DelegatingVertxGenerator;
+import io.github.jklingsporn.vertx.jooq.generate.builder.VertxGeneratorBuilder;
+import org.jooq.codegen.JavaWriter;
+import org.jooq.meta.TypedElementDefinition;
+
+import java.time.LocalDateTime;
+/**
+ * Created by jensklingsporn on 22.02.18.
+ * Converts a LocalDateTime from/into a String during JSON-conversion.
+ */
 public class CustomVertxGenerator extends DelegatingVertxGenerator {
-	
-	// link at https://github.com/jklingsporn/vertx-jooq/blob/master/vertx-jooq-generate/src/test/java/io/github/jklingsporn/vertx/jooq/generate/custom/CustomVertxGenerator.java
-	
-	/*
-	public CustomVertxGenerator() {
-        super(VertxGeneratorBuilder.init().withClassicAPI().withJDBCDriver().build());
+
+    public CustomVertxGenerator() {
+        super(VertxGeneratorBuilder.init().withClassicAPI().withPostgresReactiveDriver().build());
     }
 
     @Override
@@ -29,5 +33,4 @@ public class CustomVertxGenerator extends DelegatingVertxGenerator {
         }
         return super.handleCustomTypeToJson(column, getter, columnType, javaMemberName, out);
     }
-    */
 }

@@ -165,12 +165,10 @@ public class BookUtilHelper {
 			i++;
 		}
 		Table<Record2<Long, Integer>> batTmp = DSL.values(array);
-//		CommonTableExpression<Record2<Long, Integer>> batTmp2 = DSL.name("btaCte").fields("book_id, amount").as(DSL.rowsFrom(batTmp));
 		
 		CommonTableExpression<Record2<Long, Integer>> cte = (CommonTableExpression<Record2<Long, Integer>>) batTmp;
 		cte.fields("book_id", "amount");
 		LOGGER.info("batTmp.toString() = " + batTmp.toString());		
-//		CommonTableExpression<Record2<Long, Integer>> 
 		return cte;		
 	}
 	
@@ -188,16 +186,6 @@ public class BookUtilHelper {
 		Table<Record2<Long, Integer>> batTmp = DSL.values(list.toArray(array));	
 		return batTmp.as("batTmp", "book_id", "amount");
 	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 	
 	
 }

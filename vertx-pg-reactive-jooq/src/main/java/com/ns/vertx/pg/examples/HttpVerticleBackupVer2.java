@@ -1,8 +1,7 @@
-package com.ns.vertx.pg.http;
+package com.ns.vertx.pg.examples;
 
-import static com.ns.vertx.pg.http.ActionHelper.created;
-import static com.ns.vertx.pg.http.ActionHelper.noContent;
-import static com.ns.vertx.pg.http.ActionHelper.ok;
+/*
+import static com.ns.vertx.pg.examples.ActionHelper.*;
 
 import org.jooq.Configuration;
 import org.jooq.SQLDialect;
@@ -18,7 +17,7 @@ import com.ns.vertx.pg.service.CategoryServiceImpl;
 import com.ns.vertx.pg.service.OrderServiceImpl;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
-import io.vertx.core.AbstractVerticle;
+
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
@@ -29,11 +28,13 @@ import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.PoolOptions;
+*/
+import io.vertx.core.AbstractVerticle;
 
 
-public class HttpVerticle extends AbstractVerticle {
-
-	private final static Logger LOGGER = LoggerFactory.getLogger(HttpVerticle.class);
+public class HttpVerticleBackupVer2 extends AbstractVerticle {
+/*
+	private final static Logger LOGGER = LoggerFactory.getLogger(HttpVerticleBackupVer2.class);
 	private static int LISTEN_PORT = 8080;
 
 	private PgPool pgClient;
@@ -90,8 +91,8 @@ public class HttpVerticle extends AbstractVerticle {
 		configuration = new DefaultConfiguration();
 		configuration.set(SQLDialect.POSTGRES);
 		
-		/* NOT: D connection is AUTOMATICALY CLOSED! More info at:
-		 * https://www.jooq.org/doc/3.11/manual/getting-started/tutorials/jooq-in-7-steps/jooq-in-7-steps-step5/ */
+		// NOT: D connection is AUTOMATICALY CLOSED! More info at:
+		// https://www.jooq.org/doc/3.11/manual/getting-started/tutorials/jooq-in-7-steps/jooq-in-7-steps-step5/
 		queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
 		// no other DB-Configuration necessary because jOOQ is only used to render our statements - not for execution		
 		
@@ -107,11 +108,12 @@ public class HttpVerticle extends AbstractVerticle {
 			 .listen(LISTEN_PORT, res -> promise.handle(res.mapEmpty()));
 		return promise.future();
 	}
+
 	
 	private void getAllAuthorsHandler(RoutingContext rc) {
 		AuthorServiceImpl.getAllAuthorsJooq(queryExecutor).onComplete((ok(rc)));				
 	}	
-
+ 
 	private void getAllCategoriesHandler(RoutingContext rc) {
 		CategoryServiceImpl.getAllCategoriesJooq(queryExecutor).onComplete((ok(rc)));				
 	}
@@ -127,18 +129,18 @@ public class HttpVerticle extends AbstractVerticle {
 	}	
 	
 	private void getAllBooksHandlerJooq(RoutingContext rc) {		
-		BookServiceImpl.getAllBooksJooq(queryExecutor).onComplete(ok(rc));
+		BookServiceImplBackup.getAllBooksJooq(queryExecutor).onComplete(ok(rc));
 	}
 	
 	private void getAllBooksByAuthorIdHandler(RoutingContext rc) {
 		Long authorId = Long.valueOf(rc.request().getParam("id"));
-		BookServiceImpl.getAllBooksByAuthorIdJooq(queryExecutor, authorId).onComplete(ok(rc));
+		BookServiceImplBackup.getAllBooksByAuthorIdJooq(queryExecutor, authorId).onComplete(ok(rc));
 	}
 	
 
 	private void getBookByIdHandler(RoutingContext rc) {
 		Long id = Long.valueOf(rc.request().getParam("id"));
-		BookServiceImpl.getBookByIdJooq(queryExecutor, id).onComplete((ok(rc)));
+		BookServiceImplBackup.getBookByIdJooq(queryExecutor, id).onComplete((ok(rc)));
 	}
 	
 	private void createAuthorHandler(RoutingContext rc) {
@@ -158,7 +160,7 @@ public class HttpVerticle extends AbstractVerticle {
 	
 	private void createBookHandler(RoutingContext rc) {
 		JsonObject bookJO = rc.getBodyAsJson();						
-		BookServiceImpl.createBookJooq(queryExecutor, bookJO).onComplete(created(rc));
+		BookServiceImplBackup.createBookJooq(queryExecutor, bookJO).onComplete(created(rc));
 	}
 
 	private void updateAuthorHandler(RoutingContext rc) {
@@ -173,6 +175,8 @@ public class HttpVerticle extends AbstractVerticle {
 		Long id =  Long.valueOf(rc.request().getParam("id"));
 		Category categoryPojo = new Category(rc.getBodyAsJson());
 		categoryPojo.setCategoryId(id);
+//		JsonObject categoryJO = categoryPojo.toJson();
+//		categoryService.updateCategoryJooqSP(categoryJO, noContent(rc));
 		CategoryServiceImpl.updateCategoryJooq(queryExecutor, categoryPojo).onComplete(noContent(rc));
 	}	
 	
@@ -180,7 +184,7 @@ public class HttpVerticle extends AbstractVerticle {
 		long id = (long) Integer.valueOf(rc.request().getParam("id"));
 		JsonObject bookJO = rc.getBodyAsJson();
 		bookJO.put("book_id", id);
-		BookServiceImpl.updateBookJooq(queryExecutor, bookJO, id)
+		BookServiceImplBackup.updateBookJooq(queryExecutor, bookJO, id)
 		   .onComplete( (ok(rc)) );
 	}
 	
@@ -196,7 +200,7 @@ public class HttpVerticle extends AbstractVerticle {
 	
 	private void deleteBookHandler(RoutingContext rc) {
 		Long id =  Long.valueOf(rc.request().getParam("id"));
-		BookServiceImpl.deleteBookJooq(queryExecutor, id).onComplete(noContent(rc));
+		BookServiceImplBackup.deleteBookJooq(queryExecutor, id).onComplete(noContent(rc));
 	}
 	
 	private void getAllOrdersHandler(RoutingContext rc) {
@@ -210,5 +214,5 @@ public class HttpVerticle extends AbstractVerticle {
 		String username = parameters.get("username");
 		OrderServiceImpl.createOrderJooq(queryExecutor, orderJO, username).onComplete(created(rc));
 	}
-
+*/
 }

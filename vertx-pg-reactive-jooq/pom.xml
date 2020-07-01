@@ -32,39 +32,33 @@
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-core</artifactId>
 		</dependency>
-
+	
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-config</artifactId>
 		</dependency>
-
+	
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-web</artifactId>
 		</dependency>
-
+	
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
 			<version>1.2.3</version>
 		</dependency>
-
+	
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-pg-client</artifactId>
 		</dependency>
-		
+	
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-jdbc-client</artifactId>
 		</dependency>
-		
-		<dependency>
-			<groupId>org.javatuples</groupId>
-			<artifactId>javatuples</artifactId>
-			<version>1.2</version>
-		</dependency>
-
+	
 		<dependency>
 			<groupId>org.jooq</groupId>
 			<artifactId>jooq</artifactId>
@@ -75,6 +69,32 @@
 			<artifactId>vertx-jooq-classic-reactive</artifactId>
 			<version>${vertx-jooq-classic-reactive.version}</version>
 		</dependency>
+	
+		<dependency>
+			<groupId>io.vertx</groupId>
+			<artifactId>vertx-service-proxy</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.vertx</groupId>
+			<artifactId>vertx-codegen</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- added this from vertx-jooq-generate project in order to use JavaGenerator class -->
+		<dependency>
+            <groupId>org.jooq</groupId>
+            <artifactId>jooq-codegen</artifactId>
+            <version>${jooq.version}</version>
+        </dependency>
+        
+        <dependency>
+	        <groupId>io.github.jklingsporn</groupId>
+	        <artifactId>vertx-jooq-generate</artifactId>
+	        <version>5.1.1</version>
+	        <type>jar</type>
+	        <scope>compile</scope>
+    	</dependency>
+        
 	</dependencies>
 
 	<build>
@@ -87,7 +107,27 @@
 						<source>1.8</source>
 						<target>1.8</target>
 						<useIncrementalCompilation>false</useIncrementalCompilation>
+						
+						<annotationProcessors>
+							<annotationProcessor>io.vertx.codegen.CodeGenProcessor</annotationProcessor>
+					    </annotationProcessors>
+						<generatedSourcesDirectory>${project.basedir}/src/main/generated</generatedSourcesDirectory>
+					    <compilerArgs>
+      						<arg>-AoutputDirectory=${project.basedir}/src/main</arg>
+					    </compilerArgs>						
 					</configuration>
+				</plugin>
+
+				<plugin>
+				  <artifactId>maven-clean-plugin</artifactId>
+				  <version>3.0.0</version>
+				  <configuration>
+				    <filesets>
+				      <fileset>
+				        <directory>${project.basedir}/src/main/generated</directory>
+				      </fileset>
+				    </filesets>
+				  </configuration>
 				</plugin>
 
 				<plugin>
@@ -212,12 +252,6 @@
 						<password>postgres</password>
 					</jdbc>
 
-					<!-- Adding new generator for being able to access JavaGenerator class -->
-					<generator>
-					<!-- TODO: include plain jOOQ Code generator in order to be able to extend JavaGenerator class -->
-						<name>org.jooq.codegen.JavaGenerator</name>
-					</generator>
-
 					<!-- Generator parameters -->
 					<generator>
 						<!-- The default code generator. You can override this one, to generate your own code style.
@@ -260,6 +294,59 @@
 									<nullability>ALL</nullability>
 									<objectType>ALL</objectType>
 								</forcedType>
+												
+								<!-- works properly -->																	
+								<forcedType>
+									<userType>java.lang.String</userType> 
+									<converter>
+										org.jooq.Converter.ofNullable(org.jooq.JSON.class, String.class, Object::toString, org.jooq.JSON::valueOf)
+									</converter>	
+									<includeExpression>(?i:get_all_orders|return_value)</includeExpression>
+									<includeTypes>.*</includeTypes>
+								</forcedType>
+								
+								<!-- testing out DIRECT conversion to JsonArray/JsonObject type => current (commented-out) one does NOT work!!! -->
+<!-- 								<forcedType> -->
+<!-- 									<userType>java.lang.String</userType>  -->
+<!-- 									<converter> -->
+<!-- 										org.jooq.Converter.ofNullable(io.vertx.core.json.JsonObject.class, String.class, Object::toString, io.vertx.core.json.JsonObject::new) -->
+<!-- 									</converter>	 -->
+<!-- 									<includeExpression>(?i:get_all_orders|return_value)</includeExpression> -->
+<!-- 									<includeTypes>.*</includeTypes> -->
+<!-- 								</forcedType> -->								
+								
+								<forcedType>
+									<userType>java.lang.String</userType> 
+									<converter>
+										org.jooq.Converter.ofNullable(org.jooq.JSON.class, String.class, Object::toString, org.jooq.JSON::valueOf)
+									</converter>	
+									<includeExpression>(?i:get_book_by_book_id|return_value)</includeExpression>
+								</forcedType>
+								
+								<forcedType>
+									<userType>java.lang.String</userType> 
+									<converter>
+										org.jooq.Converter.ofNullable(java.lang.Long.class, String.class, Object::toString, java.lang.Long::valueOf)
+									</converter>	
+									<includeExpression>(?i:get_book_by_book_id\.b_id)</includeExpression>
+								</forcedType>
+																
+								<forcedType>
+									<userType>java.lang.String</userType> 
+									<converter>
+										org.jooq.Converter.ofNullable(org.jooq.JSON.class, String.class, Object::toString, org.jooq.JSON::valueOf)
+									</converter>	
+									<includeExpression>(?i:get_order_by_order_id|return_value)</includeExpression>
+								</forcedType>
+								
+								<forcedType>
+									<userType>java.lang.String</userType> 
+									<converter>
+										org.jooq.Converter.ofNullable(java.lang.Long.class, String.class, Object::toString, java.lang.Long::valueOf)
+									</converter>	
+									<includeExpression>(?i:get_order_by_order_id\.o_id)</includeExpression>
+								</forcedType>								
+																
 							</forcedTypes>
 							<dateAsTimestamp>true</dateAsTimestamp>
 							<recordTimestampFields>REC_TIMESTAMP</recordTimestampFields>							
@@ -271,6 +358,7 @@
 						</target>
 						<generate>
 							<interfaces>true</interfaces>
+							<routines>true</routines>
 							<daos>true</daos>
 							<fluentSetters>true</fluentSetters>
 <!-- 							<javaTimeTypes>true</javaTimeTypes> added because of Timestamp type for order_date field -->

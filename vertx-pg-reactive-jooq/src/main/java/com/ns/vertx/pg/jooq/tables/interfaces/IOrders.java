@@ -84,7 +84,7 @@ public interface IOrders extends VertxPojo, Serializable {
             throw new UnexpectedJsonValueType("total","java.lang.Double",e);
         }
         try {
-            // Omitting unrecognized type java.time.LocalDateTime for column order_date!
+        setOrderDate(json.getString("order_date")==null?null:LocalDateTime.parse(json.getString("order_date")));
         } catch (java.lang.ClassCastException e) {
             throw new UnexpectedJsonValueType("order_date","java.time.LocalDateTime",e);
         }
@@ -102,7 +102,7 @@ public interface IOrders extends VertxPojo, Serializable {
         io.vertx.core.json.JsonObject json = new io.vertx.core.json.JsonObject();
         json.put("order_id",getOrderId());
         json.put("total",getTotal());
-        // Omitting unrecognized type java.time.LocalDateTime for column order_date!
+        json.put("order_date",getOrderDate()==null?null:getOrderDate().toString());
         json.put("user_id",getUserId());
         return json;
     }

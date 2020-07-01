@@ -8,7 +8,6 @@ import static com.ns.vertx.pg.jooq.tables.CategoryBook.CATEGORY_BOOK;
 import static com.ns.vertx.pg.jooq.tables.OrderItem.ORDER_ITEM;
 import static com.ns.vertx.pg.jooq.tables.Orders.ORDERS;
 import static com.ns.vertx.pg.jooq.tables.Users.USERS;
-import static org.jooq.impl.DSL.jsonArray;
 
 import java.io.IOException;
 import java.sql.Timestamp;
@@ -18,7 +17,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.jooq.Configuration;
 import org.jooq.Field;
+import org.jooq.JSON;
 import org.jooq.Record2;
 import org.jooq.Record3;
 import org.jooq.Row2;
@@ -30,24 +31,118 @@ import org.jooq.impl.TimestampToLocalDateTimeConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ns.vertx.pg.jooq.Routines;
 import com.ns.vertx.pg.jooq.tables.pojos.Book;
 import com.ns.vertx.pg.jooq.tables.pojos.Orders;
 import com.ns.vertx.pg.jooq.tables.pojos.Users;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
+import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
+import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
+import io.vertx.pgclient.PgPool;
 import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.SqlConnection;
 
-public class OrderServiceImpl {
+public class OrderServiceImpl implements OrderService {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(OrderServiceImpl.class);	
+	private ReactiveClassicGenericQueryExecutor queryExecutor;
 	
+	public OrderServiceImpl(PgPool pgClient, Configuration configuration, Handler<AsyncResult<OrderService>> readyHandler) {
+		pgClient.getConnection(ar -> {
+			if (ar.failed()) {
+				LOGGER.error("Could NOT OPEN DB connection!" , ar.cause());
+				readyHandler.handle(Future.failedFuture(ar.cause()));
+			} else {
+				SqlConnection connection = ar.result();					
+				this.queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
+				LOGGER.info("+++++ Connection succeded and queryExecutor instantiation is SUCCESSFUL! +++++");
+				connection.close();		
+				readyHandler.handle(Future.succeededFuture(this));
+			}
+		});	
+	}	
+	
+	// ********************************************************************************************************************************
+	// *********************************************** OrderService CRUD methods ****************************************************** 
+	// ********************************************************************************************************************************
+	
+	@Override
+	public OrderService getAllOrdersJooqSP(Handler<AsyncResult<JsonObject>> resultHandler) {
+//		Future<QueryResult> ordersFuture = queryExecutor.transaction(qe -> qe
+//				// FIXME: try out executeAny() or findOneRow() method instead of query() !!!!
+//			.query(dsl -> dsl
+//				.select(Routines.getAllOrders()) 
+//		));
+		
+		Future<Row> ordersFuture = queryExecutor.transaction(qe -> qe
+			.findOneRow(dsl -> dsl
+				.select(Routines.getAllOrders()) 
+		));	    	
+		LOGGER.info("Passed ordersFuture...");
+	    ordersFuture.onComplete(handler -> {
+			if (handler.succeeded()) {								
+//				QueryResult qRes = handler.result();					
+//				JsonObject ordersJsonObject = OrderUtilHelper.convertGetAllOrdersQRToJsonObject(qRes);
+				JsonObject ordersJsonObject = OrderUtilHelper.extractJOFromRow(handler.result());
+				LOGGER.info("ordersJsonObject.encodePrettily(): " + ordersJsonObject.encodePrettily());
+				resultHandler.handle(Future.succeededFuture(ordersJsonObject));
+	    	} else {
+	    		LOGGER.error("Error, something failed in retrivening ALL orders! handler.cause() = " + handler.cause());
+	    		queryExecutor.rollback();	    		
+	    		resultHandler.handle(Future.failedFuture(handler.cause()));
+	    	}
+	    }); 		
+		return this;
+	}
+	
+	
+	/*
+	@Override
+	public OrderService getAllOrdersJooqSP(Handler<AsyncResult<JsonObject>> resultHandler) {		
+		Future<List<Row>> ordersFuture = queryExecutor.transaction(qe -> qe
+				.findManyRow(dsl -> dsl
+						.select(ORDERS.ORDER_ID, ORDERS.ORDER_DATE, ORDERS.TOTAL, USERS.USERNAME, ORDER_ITEM.AMOUNT,						
+								DSL.field( "to_json(array_agg(DISTINCT {0}.*))", JSON.class, AUTHOR).as("authors"),
+								DSL.field("to_json(array_agg(DISTINCT {0}.*))", JSON.class, CATEGORY).as("categories"),
+								BOOK.TITLE, BOOK.PRICE)
+						.from(ORDERS).leftJoin(ORDER_ITEM).on(ORDERS.ORDER_ID.eq(ORDER_ITEM.ORDER_ID))
+						.leftJoin(USERS).on(ORDERS.USER_ID.eq(USERS.USER_ID))
+						.leftJoin(BOOK).on(ORDER_ITEM.BOOK_ID.eq(BOOK.BOOK_ID))
+						.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
+						.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
+						.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
+						.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
+						.groupBy(ORDERS.ORDER_ID, USERS.USERNAME, ORDER_ITEM.AMOUNT, BOOK.TITLE, BOOK.PRICE, 
+								 AUTHOR.AUTHOR_ID, CATEGORY.CATEGORY_ID)
+						.orderBy(ORDERS.ORDER_ID.asc())
+				));	    				
+			LOGGER.info("Passed ordersFuture...");
+		    ordersFuture.onComplete(handler -> {
+				if (handler.succeeded()) {								
+					List<Row> ordersLR = handler.result();				
+					JsonObject ordersJsonObject = OrderUtilHelper.extractOrdersFromLR(ordersLR);
+//					LOGGER.info("ordersJsonObject.encodePrettily(): " + ordersJsonObject.encodePrettily());
+					resultHandler.handle(Future.succeededFuture(ordersJsonObject));
+		    	} else {
+		    		LOGGER.error("Error, something failed in retrivening ALL orders! handler.cause() = " + handler.cause());
+		    		queryExecutor.rollback();	    		
+		    		resultHandler.handle(Future.failedFuture(handler.cause()));
+		    	}
+		    }); 		
+		return this;
+	}*/
+
+
 	@SuppressWarnings("unchecked")
-	public static Future<JsonObject> createOrderJooq(ReactiveClassicGenericQueryExecutor queryExecutor, JsonObject orderJO, String username) {
-		Promise<JsonObject> promise = Promise.promise();
-		if (orderJO == null) { promise.handle(Future.failedFuture(new IOException("Error, request body can not be empty!"))); }
+	@Override
+	public OrderService createOrderJooqSP(JsonObject orderJO, String username, Handler<AsyncResult<JsonObject>> resultHandler) {
+		if (orderJO == null) {
+			resultHandler.handle(Future.failedFuture(new IOException("Error, request body can not be empty!")));
+		}
 		
 		Future<JsonObject> retVal = queryExecutor.beginTransaction().compose(transactionQE -> 
 			transactionQE.executeAny(dsl -> dsl
@@ -76,8 +171,10 @@ public class OrderServiceImpl {
 						for (Book sb: searchedBookList) { 
 							int updatedBookAmount = sb.getAmount() - bookIdAmountMap.get(sb.getBookId());
 							if (updatedBookAmount < 0 ) {								
-								promise.fail(new IOException("Error, it's ONLY possible (for book '" + sb.getTitle() + "', id = " + sb.getBookId() + ") to order up to " + sb.getAmount() + " copies!"));
-								transactionQE.rollback(); // ...maaaybe this is ALSO necessary
+								resultHandler.handle(Future.failedFuture(new IOException(
+										"Error, it's ONLY possible (for book '" + sb.getTitle() + "', id = "
+												+ sb.getBookId() + ") to order up to " + sb.getAmount() + " copies!")));
+								transactionQE.rollback();
 							}
 							bookIdAmountMapUpdated.put(sb.getBookId(), updatedBookAmount);
 							sb.setAmount(updatedBookAmount);	
@@ -124,47 +221,9 @@ public class OrderServiceImpl {
 					});								  		
 			}); // savedOrder::END
 		}));
-		retVal.onSuccess(handler -> promise.complete(handler));
-		retVal.onFailure(handler -> promise.fail(handler));
-		return promise.future();
-	}		
-	
-	
-	public static Future<JsonObject> getAllOrdersJooq(ReactiveClassicGenericQueryExecutor queryExecutor) {
-		Promise<JsonObject> finalRes = Promise.promise();	
-		// FIXME: 001-use WINDOW Function 
-		Future<List<Row>> ordersFuture = queryExecutor.transaction(qe -> qe
-			.findManyRow(dsl -> dsl
-				.select(ORDERS.ORDER_ID, ORDERS.ORDER_DATE, ORDERS.TOTAL, USERS.USERNAME, ORDER_ITEM.AMOUNT,						
-//						jsonArray(DSL.arrayAgg(DSL.selectDistinct(AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME).from(AUTHOR))),
-						jsonArray(AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME),
-						jsonArray(CATEGORY.CATEGORY_ID, CATEGORY.NAME, CATEGORY.IS_DELETED),
-						BOOK.TITLE, BOOK.PRICE)
-				.from(ORDERS).leftJoin(ORDER_ITEM).on(ORDERS.ORDER_ID.eq(ORDER_ITEM.ORDER_ID))
-				.leftJoin(USERS).on(ORDERS.USER_ID.eq(USERS.USER_ID))
-				.leftJoin(BOOK).on(ORDER_ITEM.BOOK_ID.eq(BOOK.BOOK_ID))
-				.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
-				.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
-				.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
-				.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
-				.groupBy(ORDERS.ORDER_ID, USERS.USERNAME, ORDER_ITEM.AMOUNT, BOOK.TITLE, BOOK.PRICE, 
-						 AUTHOR.AUTHOR_ID, CATEGORY.CATEGORY_ID)
-				.orderBy(ORDERS.ORDER_ID.asc())
-		));	    				
-		LOGGER.info("Passed ordersFuture...");
-	    ordersFuture.onComplete(handler -> {
-			if (handler.succeeded()) {								
-				List<Row> ordersLR = handler.result();				
-				JsonObject ordersJsonObject = OrderUtilHelper.extractOrdersFromLR(ordersLR);
-				LOGGER.info("ordersJsonObject.encodePrettily(): " + ordersJsonObject.encodePrettily());
-				finalRes.complete(ordersJsonObject);
-	    	} else {
-	    		LOGGER.error("Error, something failed in retrivening ALL orders! handler.cause() = " + handler.cause());
-	    		queryExecutor.rollback();	    		
-	    		finalRes.fail(handler.cause());
-	    	}
-	    }); 		
-		return finalRes.future();
+		retVal.onSuccess(result -> resultHandler.handle(Future.succeededFuture(result)));
+		retVal.onFailure(handler -> resultHandler.handle(Future.failedFuture(handler)));
+		return this;
 	}
 		
 }
