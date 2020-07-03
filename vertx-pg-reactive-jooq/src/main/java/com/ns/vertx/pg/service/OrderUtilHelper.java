@@ -6,17 +6,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.jooq.DataType;
 import org.jooq.JSON;
+import org.jooq.impl.SQLDataType;
 import org.jooq.tools.json.JSONArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ns.vertx.pg.converters.JooqJsonToVertxJsonArrayConverter;
+import com.ns.vertx.pg.converters.PostgresJSONVertxJsonObjectBinding;
 import com.ns.vertx.pg.jooq.tables.pojos.Orders;
 import com.ns.vertx.pg.jooq.tables.pojos.Users;
 
 import io.github.jklingsporn.vertx.jooq.shared.JsonObjectConverter;
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
@@ -292,7 +296,15 @@ public class OrderUtilHelper {
 	public static JsonObject convertGetAllOrdersQRToJsonObject(QueryResult qr) {
 		JsonObject finalRes2 = new JsonObject();
 		LOGGER.info("qr.hasResults() = " + qr.hasResults());
+		
 		LOGGER.info("qr.get(\"orders\", JSON.class) = " + qr.get("orders", JSON.class));
+		Row ordersRow = qr.<Row>unwrap();
+		
+		String strAllOrders = ordersRow.get(String.class, 0);
+		LOGGER.info("strAllOrders = " + strAllOrders);
+		JSON jooqJSON = ordersRow.get(JSON.class, 0);
+		LOGGER.info("jooqJSON = " + jooqJSON);
+		LOGGER.info("jooqJSON.toString() = " + jooqJSON.toString());
 		JsonArray newConverterJA = new JooqJsonToVertxJsonArrayConverter().from(qr.get("orders", JSON.class));
 		for (QueryResult qRes: qr.asList()) {			
 			LOGGER.info("qRes.toString() = " + qRes.toString());
@@ -301,9 +313,13 @@ public class OrderUtilHelper {
 			LOGGER.info("qRes.get(\"orders\", JsonArray.class) = " + qRes.get("orders", JsonArray.class));
 			LOGGER.info("qRes.get(\"orders\", String.class) = " + qRes.get("orders", String.class));
 			LOGGER.info("qRes.get(\"orders\", JsonObject.class) = " + qRes.get("orders", JsonObject.class));
+			Row ordersRowIn = qRes.<Row>unwrap();
+			Long orderId = ordersRowIn.getLong("order_id");
+			LOGGER.info("(in da for-loop) orderId = " + orderId);
 			JsonArray val1 = qRes.get("orders", JsonArray.class);
 			finalRes2.put("orders", val1);
 		}				
+//		JsonObject newConverterJO = new PostgresJSONVertxJsonObjectBinding().from(qr.get("orders", JSON.class)); 
 		LOGGER.info("newConverterJA.encodePrettily() = \n" + newConverterJA.encodePrettily());
 		LOGGER.info("finalRes2.encodePrettily() = \n" + finalRes2.encodePrettily());
 		LOGGER.info("Moving on...");
@@ -312,9 +328,11 @@ public class OrderUtilHelper {
 	
 	
 	public static JsonObject extractJOFromRow(Row row) {
-		String[] ordersStr = row.getStringArray("orders");
-		LOGGER.info("ordersStr = " + ordersStr);		
-		return new JsonObject().put("orders", ordersStr);
+		Buffer jsonBuffer = row.getBuffer("orders");
+		LOGGER.info("retrived value into io.vertx.core.buffer.Buffer variable..");
+		
+		
+		return new JsonObject().put("orders", "bla, bla");
 	}
 		
 

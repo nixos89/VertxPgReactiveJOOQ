@@ -345,7 +345,30 @@
 										org.jooq.Converter.ofNullable(java.lang.Long.class, String.class, Object::toString, java.lang.Long::valueOf)
 									</converter>	
 									<includeExpression>(?i:get_order_by_order_id\.o_id)</includeExpression>
-								</forcedType>								
+								</forcedType>							
+								
+								<forcedType>
+							      <!-- Specify the Java type of your custom type. This corresponds to the Binding's <U> type. -->
+							      <userType>io.vertx.core.json.JsonArray</userType>							
+							      <!-- Associate that custom type with your binding. -->
+							      <binding>com.ns.vertx.pg.converters.PostgresJSONVertxJsonArrayBinding</binding>							
+							      <!-- A Java regex matching fully-qualified columns, attributes, parameters. Use the pipe to separate several expressions.							           
+							           If provided, both "includeExpressions" and "includeTypes" must match. -->
+							      <includeExpression>.*JSON.*</includeExpression>							      
+							      <!-- A Java regex matching data types to be forced to
+							           have this type.
+							      
+							           Data types may be reported by your database as:
+							           - NUMBER              regexp suggestion: NUMBER
+							           - NUMBER(5)           regexp suggestion: NUMBER\(5\)
+							           - NUMBER(5, 2)        regexp suggestion: NUMBER\(5,\s*2\)
+							           - any other form
+							           
+							           It is thus recommended to use defensive regexes for types.
+							           
+							           If provided, both "includeExpressions" and "includeTypes" must match. -->
+							      <includeTypes>.*JSON.*</includeTypes>
+							    </forcedType>	
 																
 							</forcedTypes>
 							<dateAsTimestamp>true</dateAsTimestamp>
