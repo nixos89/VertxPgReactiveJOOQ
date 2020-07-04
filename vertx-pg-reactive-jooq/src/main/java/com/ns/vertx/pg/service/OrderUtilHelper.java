@@ -294,44 +294,61 @@ public class OrderUtilHelper {
 	}
 	
 	public static JsonObject convertGetAllOrdersQRToJsonObject(QueryResult qr) {
-		JsonObject finalRes2 = new JsonObject();
-		LOGGER.info("qr.hasResults() = " + qr.hasResults());
-		
-		LOGGER.info("qr.get(\"orders\", JSON.class) = " + qr.get("orders", JSON.class));
+		LOGGER.info("qr.hasResults() = " + qr.hasResults());		
+		JsonArray ordersJA = qr.get("orders", JsonArray.class);
+		JsonObject ordersJO = qr.get("orders", JsonObject.class);
+		LOGGER.info("ordersJA = " + ordersJA);
+		LOGGER.info("ordersJO = " + ordersJO);
 		Row ordersRow = qr.<Row>unwrap();
+		String strOrders = ordersRow.getString("orders");
+		LOGGER.info("ordersRow.getColumnName(0) = " + ordersRow.getColumnName(0));
+		LOGGER.info("ordersRow.getColumnName(1) = " + ordersRow.getColumnName(1));
+		LOGGER.info("strOrders = " + strOrders);
+		JSON jooqJSON = qr.get("orders", JSON.class);
+		LOGGER.info("jooqJSON = " + jooqJSON);
+//		JSON joosJSONFromOrdersRow = ordersRow.get(JSON.class, 0);
+//		LOGGER.info("joosJSONFromOrdersRow = " + joosJSONFromOrdersRow);
 		
 		String strAllOrders = ordersRow.get(String.class, 0);
-		LOGGER.info("strAllOrders = " + strAllOrders);
-		JSON jooqJSON = ordersRow.get(JSON.class, 0);
-		LOGGER.info("jooqJSON = " + jooqJSON);
-		LOGGER.info("jooqJSON.toString() = " + jooqJSON.toString());
-		JsonArray newConverterJA = new JooqJsonToVertxJsonArrayConverter().from(qr.get("orders", JSON.class));
+		LOGGER.info("strAllOrders = " + strAllOrders); // returns "null" and after this it HANGS and TIMEOUTs (Time out after waiting 30000ms ) !!!
+
+//		JsonArray newConverterJA = new JooqJsonToVertxJsonArrayConverter().from(qr.get("orders", JSON.class));
 		for (QueryResult qRes: qr.asList()) {			
-			LOGGER.info("qRes.toString() = " + qRes.toString());
+			LOGGER.info("qRes.toString() =\n" + qRes.toString());
+			JsonArray ordersJA2 = qRes.get("orders", JsonArray.class);
+			JsonObject ordersJO2 = qRes.get("orders", JsonObject.class);
+			LOGGER.info("ordersJA2 = " + ordersJA2);
+			LOGGER.info("ordersJO2 = " + ordersJO2);
+			Row singleRow = qRes.<Row>unwrap();
+			LOGGER.info("singleRow.getLong(\"order_id\") = " + singleRow.getLong("order_id"));
+			LOGGER.info("singleRow.getColumnIndex(\"order_id\") = " + singleRow.getColumnIndex("order_id"));
 			LOGGER.info("qRes.get(\"orders\", JSON.class) = " + qRes.get("orders", JSON.class));
 			LOGGER.info("qRes.get(\"orders\", JSONArray.class) = " + qRes.get("orders", JSONArray.class));
 			LOGGER.info("qRes.get(\"orders\", JsonArray.class) = " + qRes.get("orders", JsonArray.class));
 			LOGGER.info("qRes.get(\"orders\", String.class) = " + qRes.get("orders", String.class));
 			LOGGER.info("qRes.get(\"orders\", JsonObject.class) = " + qRes.get("orders", JsonObject.class));
 			Row ordersRowIn = qRes.<Row>unwrap();
-			Long orderId = ordersRowIn.getLong("order_id");
-			LOGGER.info("(in da for-loop) orderId = " + orderId);
-			JsonArray val1 = qRes.get("orders", JsonArray.class);
-			finalRes2.put("orders", val1);
-		}				
-//		JsonObject newConverterJO = new PostgresJSONVertxJsonObjectBinding().from(qr.get("orders", JSON.class)); 
-		LOGGER.info("newConverterJA.encodePrettily() = \n" + newConverterJA.encodePrettily());
-		LOGGER.info("finalRes2.encodePrettily() = \n" + finalRes2.encodePrettily());
-		LOGGER.info("Moving on...");
-		return new JsonObject().put("orders", newConverterJA);
+			LOGGER.info("ordersRowIn = " + ordersRowIn);
+			LOGGER.info("ordersRowIn.getLong(\"order_id\") = " + ordersRowIn.getLong("order_id"));
+			LOGGER.info("ordersRowIn.getColumnName(0) = " + ordersRowIn.getColumnName(0));
+			LOGGER.info("ordersRowIn.getColumnName(1) = " + ordersRowIn.getColumnName(1));
+			JSON jooqJSON2 = ordersRowIn.get(JSON.class, 0);
+			LOGGER.info("jooqJSON2 = " + jooqJSON2);
+			JsonArray ordersJA3 = ordersRowIn.get(JsonArray.class, 0);
+			JsonObject ordersJO3 = ordersRowIn.get(JsonObject.class, 0);
+			LOGGER.info("ordersJA3 = " + ordersJA3);
+			LOGGER.info("ordersJO3 = " + ordersJO3);
+		}				 
+//		LOGGER.info("newConverterJA.encodePrettily() = \n" + newConverterJA.encodePrettily());
+		return new JsonObject().put("orders", "bla, bla");
 	}
 	
 	
 	public static JsonObject extractJOFromRow(Row row) {
-		Buffer jsonBuffer = row.getBuffer("orders");
-		LOGGER.info("retrived value into io.vertx.core.buffer.Buffer variable..");
-		
-		
+//		Buffer jsonBuffer = row.getBuffer("orders");
+//		LOGGER.info("retrived value into io.vertx.core.buffer.Buffer variable..");
+		LOGGER.info("row.getColumnName(0) = " + row.getColumnName(0));
+		LOGGER.info("row.getColumnName(1) = " + row.getColumnName(1));
 		return new JsonObject().put("orders", "bla, bla");
 	}
 		

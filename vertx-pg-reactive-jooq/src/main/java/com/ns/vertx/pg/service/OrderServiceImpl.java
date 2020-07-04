@@ -72,23 +72,20 @@ public class OrderServiceImpl implements OrderService {
 	
 	@Override
 	public OrderService getAllOrdersJooqSP(Handler<AsyncResult<JsonObject>> resultHandler) {
-		Future<QueryResult> ordersFuture = queryExecutor.transaction(qe -> qe
-				// FIXME: try out executeAny() or findOneRow() method instead of query() !!!!
-			.query(dsl -> dsl
-				.select(Routines.getAllOrders()) 
-		));
+//		Future<QueryResult> ordersFuture = queryExecutor.transaction(qe -> qe
+//			.query(dsl -> dsl.resultQuery("SELECT get_all_orders()")
+//		));
 		
-//		Future<Row> ordersFuture = queryExecutor.transaction(qe -> qe
-//			.findOneRow(dsl -> dsl
-//				.select(Routines.getAllOrders()) 
-//		));	    	
+		Future<Row> ordersFuture = queryExecutor.transaction(qe -> qe
+//				.findOneRow(dsl -> dsl.resultQuery("SELECT get_all_orders()")
+				.findOneRow(dsl -> dsl.select(Routines.getAllOrders())
+			));
 		LOGGER.info("Passed ordersFuture...");
 	    ordersFuture.onComplete(handler -> {
 			if (handler.succeeded()) {								
-				QueryResult qRes = handler.result();					
-				JsonObject ordersJsonObject = OrderUtilHelper.convertGetAllOrdersQRToJsonObject(qRes);
-//				JsonObject ordersJsonObject = OrderUtilHelper.extractJOFromRow(handler.result());
-//				LOGGER.info("ordersJsonObject.encodePrettily(): " + ordersJsonObject.encodePrettily());
+//				QueryResult qRes = handler.result();					
+//				JsonObject ordersJsonObject = OrderUtilHelper.convertGetAllOrdersQRToJsonObject(qRes);
+				JsonObject ordersJsonObject = OrderUtilHelper.extractJOFromRow(handler.result());
 				resultHandler.handle(Future.succeededFuture(ordersJsonObject));
 	    	} else {
 	    		LOGGER.error("Error, something failed in retrivening ALL orders! handler.cause() = " + handler.cause());
