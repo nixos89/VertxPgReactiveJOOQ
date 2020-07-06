@@ -1,15 +1,14 @@
 package com.ns.vertx.pg.service;
 
-import static com.ns.vertx.pg.jooq.tables.Author.AUTHOR;
-import static com.ns.vertx.pg.jooq.tables.AuthorBook.AUTHOR_BOOK;
 import static com.ns.vertx.pg.jooq.tables.Book.BOOK;
-import static com.ns.vertx.pg.jooq.tables.Category.CATEGORY;
-import static com.ns.vertx.pg.jooq.tables.CategoryBook.CATEGORY_BOOK;
 import static com.ns.vertx.pg.jooq.tables.OrderItem.ORDER_ITEM;
 import static com.ns.vertx.pg.jooq.tables.Orders.ORDERS;
 import static com.ns.vertx.pg.jooq.tables.Users.USERS;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -18,12 +17,17 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.jooq.Configuration;
+import org.jooq.DSLContext;
 import org.jooq.Field;
-import org.jooq.JSON;
+import org.jooq.JSONFormat;
+import org.jooq.JSONFormat.RecordFormat;
+import org.jooq.Record1;
 import org.jooq.Record2;
 import org.jooq.Record3;
+import org.jooq.Result;
 import org.jooq.Row2;
 import org.jooq.Row3;
+import org.jooq.SQLDialect;
 import org.jooq.Table;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
@@ -37,13 +41,11 @@ import com.ns.vertx.pg.jooq.tables.pojos.Orders;
 import com.ns.vertx.pg.jooq.tables.pojos.Users;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
-import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.pgclient.PgPool;
-import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.SqlConnection;
 
 public class OrderServiceImpl implements OrderService {
@@ -72,66 +74,30 @@ public class OrderServiceImpl implements OrderService {
 	
 	@Override
 	public OrderService getAllOrdersJooqSP(Handler<AsyncResult<JsonObject>> resultHandler) {
-//		Future<QueryResult> ordersFuture = queryExecutor.transaction(qe -> qe
-//			.query(dsl -> dsl.resultQuery("SELECT get_all_orders()")
-//		));
-		
-		Future<Row> ordersFuture = queryExecutor.transaction(qe -> qe
-//				.findOneRow(dsl -> dsl.resultQuery("SELECT get_all_orders()")
-				.findOneRow(dsl -> dsl.select(Routines.getAllOrders())
-			));
-		LOGGER.info("Passed ordersFuture...");
-	    ordersFuture.onComplete(handler -> {
-			if (handler.succeeded()) {								
-//				QueryResult qRes = handler.result();					
-//				JsonObject ordersJsonObject = OrderUtilHelper.convertGetAllOrdersQRToJsonObject(qRes);
-				JsonObject ordersJsonObject = OrderUtilHelper.extractJOFromRow(handler.result());
-				resultHandler.handle(Future.succeededFuture(ordersJsonObject));
-	    	} else {
-	    		LOGGER.error("Error, something failed in retrivening ALL orders! handler.cause() = " + handler.cause());
-	    		queryExecutor.rollback();	    		
-	    		resultHandler.handle(Future.failedFuture(handler.cause()));
-	    	}
-	    }); 		
+		Connection connection = null;
+		try {
+			connection = DriverManager.getConnection(
+					"jdbc:postgresql://localhost:5432/vertx-jooq-cr",
+					"postgres", "postgres");
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			DSLContext create = DSL.using(connection, SQLDialect.POSTGRES);
+			Result<Record1<String>> resultR1S = create.select(Routines.getAllOrders()).fetch();
+			String strResultFinal = resultR1S.formatJSON(
+					new JSONFormat()
+					.header(false)
+					.recordFormat(RecordFormat.ARRAY)
+			);
+			final String fixedJSONString = strResultFinal
+					.substring(3, strResultFinal.length() - 3)
+					.replaceAll("\\\\n", "")
+					.replaceAll("\\\\", "");
+			JsonObject ordersJA = new JsonObject(fixedJSONString);
+			resultHandler.handle(Future.succeededFuture(ordersJA));
+		}	
 		return this;
 	}
-	
-	
-	/*
-	@Override
-	public OrderService getAllOrdersJooqSP(Handler<AsyncResult<JsonObject>> resultHandler) {		
-		Future<List<Row>> ordersFuture = queryExecutor.transaction(qe -> qe
-				.findManyRow(dsl -> dsl
-						.select(ORDERS.ORDER_ID, ORDERS.ORDER_DATE, ORDERS.TOTAL, USERS.USERNAME, ORDER_ITEM.AMOUNT,						
-								DSL.field( "to_json(array_agg(DISTINCT {0}.*))", JSON.class, AUTHOR).as("authors"),
-								DSL.field("to_json(array_agg(DISTINCT {0}.*))", JSON.class, CATEGORY).as("categories"),
-								BOOK.TITLE, BOOK.PRICE)
-						.from(ORDERS).leftJoin(ORDER_ITEM).on(ORDERS.ORDER_ID.eq(ORDER_ITEM.ORDER_ID))
-						.leftJoin(USERS).on(ORDERS.USER_ID.eq(USERS.USER_ID))
-						.leftJoin(BOOK).on(ORDER_ITEM.BOOK_ID.eq(BOOK.BOOK_ID))
-						.leftJoin(AUTHOR_BOOK).on(BOOK.BOOK_ID.eq(AUTHOR_BOOK.BOOK_ID))
-						.leftJoin(AUTHOR).on(AUTHOR_BOOK.AUTHOR_ID.eq(AUTHOR.AUTHOR_ID))
-						.leftJoin(CATEGORY_BOOK).on(BOOK.BOOK_ID.eq(CATEGORY_BOOK.BOOK_ID))
-						.leftJoin(CATEGORY).on(CATEGORY_BOOK.CATEGORY_ID.eq(CATEGORY.CATEGORY_ID))
-						.groupBy(ORDERS.ORDER_ID, USERS.USERNAME, ORDER_ITEM.AMOUNT, BOOK.TITLE, BOOK.PRICE, 
-								 AUTHOR.AUTHOR_ID, CATEGORY.CATEGORY_ID)
-						.orderBy(ORDERS.ORDER_ID.asc())
-				));	    				
-			LOGGER.info("Passed ordersFuture...");
-		    ordersFuture.onComplete(handler -> {
-				if (handler.succeeded()) {								
-					List<Row> ordersLR = handler.result();				
-					JsonObject ordersJsonObject = OrderUtilHelper.extractOrdersFromLR(ordersLR);
-//					LOGGER.info("ordersJsonObject.encodePrettily(): " + ordersJsonObject.encodePrettily());
-					resultHandler.handle(Future.succeededFuture(ordersJsonObject));
-		    	} else {
-		    		LOGGER.error("Error, something failed in retrivening ALL orders! handler.cause() = " + handler.cause());
-		    		queryExecutor.rollback();	    		
-		    		resultHandler.handle(Future.failedFuture(handler.cause()));
-		    	}
-		    }); 		
-		return this;
-	}*/
 
 
 	@SuppressWarnings("unchecked")
@@ -222,5 +188,32 @@ public class OrderServiceImpl implements OrderService {
 		retVal.onFailure(handler -> resultHandler.handle(Future.failedFuture(handler)));
 		return this;
 	}
+	
+	/*
+	@Override
+	public OrderService getAllOrdersJooqSP(Handler<AsyncResult<JsonArray>> resultHandler) {
+		Future<QueryResult> ordersFuture = queryExecutor.transaction(qe -> qe
+			.query(dsl -> dsl.resultQuery("SELECT get_all_orders()")
+		));		
+		
+//		Future<Row> ordersFuture = queryExecutor.transaction(qe -> qe
+//				.findOneRow(dsl -> dsl.select(Routines.getAllOrders())
+//			));
+		LOGGER.info("Passed ordersFuture...");
+	    ordersFuture.onComplete(handler -> {
+			if (handler.succeeded()) {								
+//				QueryResult qRes = handler.result();					
+//				JsonObject ordersJsonObject = OrderUtilHelper.convertGetAllOrdersQRToJsonObject(qRes);
+				JsonObject ordersJsonObject = OrderUtilHelper.extractJOFromRow(handler.result());				
+				resultHandler.handle(Future.succeededFuture(ordersJsonObject));
+	    	} else {
+	    		LOGGER.error("Error, something failed in retrivening ALL orders! handler.cause() = " + handler.cause());
+	    		queryExecutor.rollback();	    		
+	    		resultHandler.handle(Future.failedFuture(handler.cause()));
+	    	}
+	    }); 	
+		return this;
+	}
+	*/
 		
 }

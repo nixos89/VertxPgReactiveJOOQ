@@ -196,7 +196,14 @@ public class HttpServerVerticle extends AbstractVerticle {
 	}
 		
 	private void getAllOrdersHandler(RoutingContext rc) {
-		orderService.getAllOrdersJooqSP(ok(rc));
+		vertx.executeBlocking(promise -> {
+			orderService.getAllOrdersJooqSP(ok(rc));
+			LOGGER.info("\n======= Performing 'blockingCodeHandler'... =======");
+		}, res -> {
+//			res.result();
+			LOGGER.info("\n======= Retriving result inside of 'resultHandler'... =======");
+			LOGGER.info("*************** Done!!! ***************");
+		});
 	}
 	
 	private void createOrderHandler(RoutingContext rc) {

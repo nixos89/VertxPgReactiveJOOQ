@@ -6,21 +6,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.jooq.DataType;
 import org.jooq.JSON;
-import org.jooq.impl.SQLDataType;
 import org.jooq.tools.json.JSONArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ns.vertx.pg.converters.JooqJsonToVertxJsonArrayConverter;
-import com.ns.vertx.pg.converters.PostgresJSONVertxJsonObjectBinding;
 import com.ns.vertx.pg.jooq.tables.pojos.Orders;
 import com.ns.vertx.pg.jooq.tables.pojos.Users;
 
 import io.github.jklingsporn.vertx.jooq.shared.JsonObjectConverter;
 import io.github.jklingsporn.vertx.jooq.shared.internal.QueryResult;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Row;
@@ -339,14 +334,11 @@ public class OrderUtilHelper {
 			LOGGER.info("ordersJA3 = " + ordersJA3);
 			LOGGER.info("ordersJO3 = " + ordersJO3);
 		}				 
-//		LOGGER.info("newConverterJA.encodePrettily() = \n" + newConverterJA.encodePrettily());
 		return new JsonObject().put("orders", "bla, bla");
 	}
 	
 	
 	public static JsonObject extractJOFromRow(Row row) {
-//		Buffer jsonBuffer = row.getBuffer("orders");
-//		LOGGER.info("retrived value into io.vertx.core.buffer.Buffer variable..");
 		LOGGER.info("row.getColumnName(0) = " + row.getColumnName(0));
 		LOGGER.info("row.getColumnName(1) = " + row.getColumnName(1));
 		return new JsonObject().put("orders", "bla, bla");

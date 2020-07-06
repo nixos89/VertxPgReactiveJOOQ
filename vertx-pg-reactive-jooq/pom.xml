@@ -49,6 +49,13 @@
 			<version>1.2.3</version>
 		</dependency>
 	
+		<!-- required driver for using plain jOOQ querying -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.2.11</version>
+		</dependency>
+	
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-pg-client</artifactId>
@@ -264,9 +271,6 @@
 							<name>org.jooq.meta.postgres.PostgresDatabase</name>
 							<includes>.*</includes>
 							<inputSchema>public</inputSchema>
-							<!-- 'outputSchema' commented OUT by NikolaS -->
-<!-- 							<outputSchema>public</outputSchema>  -->
-<!-- 							<inputCatalog>public</inputCatalog> added by NikolaS -->
 							<unsignedTypes>false</unsignedTypes>
 							<forcedTypes>
 								<!-- Convert tinyint to boolean -->
@@ -294,8 +298,7 @@
 									<nullability>ALL</nullability>
 									<objectType>ALL</objectType>
 								</forcedType>
-												
-								<!-- works properly -->																	
+																													
 								<forcedType>
 									<userType>java.lang.String</userType> 
 									<converter>
@@ -303,17 +306,7 @@
 									</converter>	
 									<includeExpression>(?i:get_all_orders|return_value)</includeExpression>
 									<includeTypes>.*</includeTypes>
-								</forcedType>
-								
-								<!-- testing out DIRECT conversion to JsonArray/JsonObject type => current (commented-out) one does NOT work!!! -->
-<!-- 								<forcedType> -->
-<!-- 									<userType>java.lang.String</userType>  -->
-<!-- 									<converter> -->
-<!-- 										org.jooq.Converter.ofNullable(io.vertx.core.json.JsonObject.class, String.class, Object::toString, io.vertx.core.json.JsonObject::new) -->
-<!-- 									</converter>	 -->
-<!-- 									<includeExpression>(?i:get_all_orders|return_value)</includeExpression> -->
-<!-- 									<includeTypes>.*</includeTypes> -->
-<!-- 								</forcedType> -->								
+								</forcedType>															
 								
 								<forcedType>
 									<userType>java.lang.String</userType> 
@@ -347,29 +340,13 @@
 									<includeExpression>(?i:get_order_by_order_id\.o_id)</includeExpression>
 								</forcedType>							
 								
-								<forcedType>
-							      <!-- Specify the Java type of your custom type. This corresponds to the Binding's <U> type. -->
-							      <userType>io.vertx.core.json.JsonArray</userType>							
-							      <!-- Associate that custom type with your binding. -->
-							      <binding>com.ns.vertx.pg.converters.PostgresJSONVertxJsonArrayBinding</binding>							
-							      <!-- A Java regex matching fully-qualified columns, attributes, parameters. Use the pipe to separate several expressions.							           
-							           If provided, both "includeExpressions" and "includeTypes" must match. -->
-							      <includeExpression>.*JSON.*</includeExpression>							      
-							      <!-- A Java regex matching data types to be forced to
-							           have this type.
-							      
-							           Data types may be reported by your database as:
-							           - NUMBER              regexp suggestion: NUMBER
-							           - NUMBER(5)           regexp suggestion: NUMBER\(5\)
-							           - NUMBER(5, 2)        regexp suggestion: NUMBER\(5,\s*2\)
-							           - any other form
-							           
-							           It is thus recommended to use defensive regexes for types.
-							           
-							           If provided, both "includeExpressions" and "includeTypes" must match. -->
-							      <includeTypes>.*JSON.*</includeTypes>
-							    </forcedType>	
-																
+<!-- 								<forcedType>							       -->
+<!-- 							      <userType>io.vertx.core.json.JsonArray</userType>														       -->
+<!-- 							      <binding>com.ns.vertx.pg.converters.PostgresJSONVertxJsonArrayBinding</binding>														       -->
+<!-- 							      <includeExpression>.*JSON.*</includeExpression>							      							       -->
+<!-- 							      <includeTypes>.*JSON.*</includeTypes> -->
+<!-- 							    </forcedType>	 -->
+							    																
 							</forcedTypes>
 							<dateAsTimestamp>true</dateAsTimestamp>
 							<recordTimestampFields>REC_TIMESTAMP</recordTimestampFields>							
@@ -396,9 +373,7 @@
 			</plugin>
 			<!-- Plug-in for "VertX-JOOQ-Classic-Reactive"::END -->
 			<!-- ============================================== -->
-
 		</plugins>
 	</build>
-
 
 </project>
