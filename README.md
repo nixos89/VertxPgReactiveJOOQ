@@ -3,7 +3,7 @@ RESTful web application built in Vertx using [vertx-pg-client](https://github.co
 
 
 ## How to launch app
-1) First in order to connect to existing database you must restore database using `restore.sql` located in *vertx-pg-reactive-jooq/src/main/resources* in your DB tool (such as pgAdmin4)
+1) First in order to connect to existing database you must restore database using `vertx-jooq-cr-backup.tar` (located in root directory of this repo) in your DB tool (such as pgAdmin4)
 2) Make sure that all parameters for database access (database name, db username, password, etc.) located in *pom.xml* file are properly set
 3) Change location in your terminal to be inside of "vertx-pg-reactive-jooq" project
 4) Run `mvn clean package` command
@@ -14,9 +14,9 @@ RESTful web application built in Vertx using [vertx-pg-client](https://github.co
 Here are some API endpoints to target (using Postman or similar tool) including some JSON bodies for HTTP Request:
 
 ### GET methods
-Get single Author with id=1 [http://localhost:8080/api/authors/1](http://localhost:8080/api/authors/1)
-Get all Categories [http://localhost:8080/api/categories](http://localhost:8080/api/categories)
-Get single Book[http://localhost:8080/api/books/1](http://localhost:8080/api/books/1)
+Get single Author with id=1 [http://localhost:8080/api/authors/1](http://localhost:8080/api/authors/1)<br/>
+Get all Categories [http://localhost:8080/api/categories](http://localhost:8080/api/categories)<br/>
+Get single Book[http://localhost:8080/api/books/1](http://localhost:8080/api/books/1)<br/>
 
 ## POST methods
 Create Author [http://localhost:8080/api/authors](http://localhost:8080/api/authors)
