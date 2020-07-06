@@ -79,9 +79,6 @@ public class OrderServiceImpl implements OrderService {
 			connection = DriverManager.getConnection(
 					"jdbc:postgresql://localhost:5432/vertx-jooq-cr",
 					"postgres", "postgres");
-		} catch (SQLException e) {
-			e.printStackTrace();
-		} finally {
 			DSLContext create = DSL.using(connection, SQLDialect.POSTGRES);
 			Result<Record1<String>> resultR1S = create.select(Routines.getAllOrders()).fetch();
 			String strResultFinal = resultR1S.formatJSON(
@@ -94,8 +91,11 @@ public class OrderServiceImpl implements OrderService {
 					.replaceAll("\\\\n", "")
 					.replaceAll("\\\\", "");
 			JsonObject ordersJA = new JsonObject(fixedJSONString);
-			resultHandler.handle(Future.succeededFuture(ordersJA));
-		}	
+			connection.close();
+			resultHandler.handle(Future.succeededFuture(ordersJA));			
+		} catch (SQLException e) {
+			e.printStackTrace();			
+		}
 		return this;
 	}
 
