@@ -172,8 +172,8 @@ public class BookServiceImpl implements BookService {
 				final Long bookId = resultJO.getLong("book_id");
 				LOGGER.info("saved book:\n" + resultJO.encodePrettily());
 				
-				Set<Long> authorIds = bookJO.getJsonArray("author_ids").stream().mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());															
-				Set<Long> categoryIds = bookJO.getJsonArray("category_ids").stream().mapToLong(c -> Long.valueOf(String.valueOf(c))).boxed().collect(Collectors.toSet());																	
+				Set<Long> authorIds = bookJO.getJsonArray("authors").stream().mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());															
+				Set<Long> categoryIds = bookJO.getJsonArray("categories").stream().mapToLong(c -> Long.valueOf(String.valueOf(c))).boxed().collect(Collectors.toSet());																	
 								
 				return transactionQE.execute(dsl -> {										
 					CommonTableExpression<Record2<Long, Long>> author_book_tbl = BookUtilHelper.author_book_tbl(dsl, bookId, authorIds);					
