@@ -175,13 +175,15 @@ public class BookServiceImpl implements BookService {
 				Set<Long> authorIds = bookJO.getJsonArray("authors").stream().mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());															
 				Set<Long> categoryIds = bookJO.getJsonArray("categories").stream().mapToLong(c -> Long.valueOf(String.valueOf(c))).boxed().collect(Collectors.toSet());																	
 								
-				return transactionQE.execute(dsl -> {										
+				return transactionQE.execute(dsl -> {			
+					LOGGER.info("Going good..");
 					CommonTableExpression<Record2<Long, Long>> author_book_tbl = BookUtilHelper.author_book_tbl(dsl, bookId, authorIds);					
 					return dsl.with(author_book_tbl)						
 						.insertInto(AUTHOR_BOOK, AUTHOR_BOOK.BOOK_ID, AUTHOR_BOOK.AUTHOR_ID)
 						.select(dsl.selectFrom(author_book_tbl));
 				}).compose(res -> {
-					return transactionQE.execute(dsl -> { 						
+					return transactionQE.execute(dsl -> { 	
+						LOGGER.info("Going good..");
 						CommonTableExpression<Record2<Long, Long>> category_book_tbl = BookUtilHelper.category_book_tbl(dsl, bookId, categoryIds);											
 						return dsl.with(category_book_tbl)									
 							.insertInto(CATEGORY_BOOK, CATEGORY_BOOK.BOOK_ID, CATEGORY_BOOK.CATEGORY_ID)
@@ -200,7 +202,7 @@ public class BookServiceImpl implements BookService {
 				LOGGER.info("Success, inserting is completed!");
 				resultHandler.handle(Future.succeededFuture());
 			} else {
-				LOGGER.error("Error, somethin' WENT WRRRONG!! handler.result() = " + handler.result());
+				LOGGER.error("Error, somethin' WENT WRRRONG!! handler.result() = " + handler.cause());
 				resultHandler.handle(Future.failedFuture(handler.cause()));
 			}
 		});

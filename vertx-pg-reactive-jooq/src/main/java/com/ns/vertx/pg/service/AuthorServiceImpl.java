@@ -37,16 +37,12 @@ public class AuthorServiceImpl implements AuthorService {
 				connection.close();		
 				readyHandler.handle(Future.succeededFuture(this));
 			}
-		});
-		
-		this.queryExecutor = new ReactiveClassicGenericQueryExecutor(configuration, pgClient);
-		LOGGER.info("+++++++++ queryExecutor instantiation is SUCCESSFUL (in AuthorServiceImpl)! +++++++++");
+		});	
 	}
 	
 	// ************************************************************************************************
 	// ******************************* AuthorService CRUD methods ************************************* 
-	// ************************************************************************************************	
-	
+	// ************************************************************************************************		
 	@Override
 	public AuthorService getAllAuthorsJooqSP(Handler<AsyncResult<JsonObject>> resultHandler) {
 		 Future<List<Row>> bookFuture = queryExecutor.transaction(qe -> {			
@@ -98,13 +94,21 @@ public class AuthorServiceImpl implements AuthorService {
 	@Override
 	public AuthorService createAuthorJooqSP(String firstName, String lastName,
 			Handler<AsyncResult<Void>> resultHandler) {
-		Future<Integer> retVal = queryExecutor.transaction(transactionQE -> transactionQE.execute(dsl -> 
-			dsl.insertInto(AUTHOR, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME)
-			   .values(firstName, lastName)
-			   .returningResult(AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME))
-		);	
-		retVal.onComplete(ar -> Future.succeededFuture());
-		retVal.onFailure(ar -> resultHandler.handle(Future.failedFuture(ar)));	
+		Future<Integer> retVal = queryExecutor.transaction(transactionQE -> { 
+			return transactionQE.execute(dsl -> dsl 
+				.insertInto(AUTHOR, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME)
+				.values(firstName, lastName)
+				.returningResult(AUTHOR.AUTHOR_ID));			
+		});	
+		LOGGER.info("About to go into retVal.onSuccess(..) method...");
+		retVal.onSuccess(ar -> {
+			LOGGER.info("Author with ID  = " + ar + "is inserted...");
+			resultHandler.handle(Future.succeededFuture());
+		});
+		retVal.onFailure(throwable -> {
+			queryExecutor.rollback();
+			resultHandler.handle(Future.failedFuture(throwable));
+		});	
 		return this;
 	}
 
@@ -120,7 +124,7 @@ public class AuthorServiceImpl implements AuthorService {
 				.where(AUTHOR.AUTHOR_ID.eq(authorJO.getLong("author_id")))				
 			);
 		});		
-		retVal.onComplete(ar -> resultHandler.handle(Future.succeededFuture()));
+		retVal.onSuccess(ar -> resultHandler.handle(Future.succeededFuture()));
 		retVal.onFailure(handler -> {
 			LOGGER.error("Error, something went wrong! Cause:\n" + handler.getStackTrace());
 			resultHandler.handle(Future.failedFuture(new NoSuchElementException("Error, author has not been updated for id = "
@@ -151,9 +155,7 @@ public class AuthorServiceImpl implements AuthorService {
 	
 	// **************************************************************************************************
 	//  **************************************** Helper methods *****************************************
-	// **************************************************************************************************
-	
-	
+	// **************************************************************************************************	
 	private static JsonObject fillAuthor(Row row) {
 		return new JsonObject()
 			.put("author_id", row.getLong("author_id"))
@@ -172,9 +174,6 @@ public class AuthorServiceImpl implements AuthorService {
 		JsonObject joAuthors= new JsonObject().put("authors", authorsJA);		
 		return joAuthors;
 	}
-
-
-	
 	
 	
 }

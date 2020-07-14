@@ -86,7 +86,6 @@ public class HttpServerVerticle extends AbstractVerticle {
 		});
 		
 		LOGGER.info("Whole setUp in in start() went well...");
-		// FIXME: 001-code DIRECTLY here CREATION of HttpServer
 		HttpServer server = vertx.createHttpServer();
 		int portNumber =  config().getInteger(CONFIG_HTTP_SERVER_PORT, LISTEN_PORT);
 		server.exceptionHandler(handler -> LOGGER.error("exceptionHandler triggered, " + handler.getCause()));		
@@ -115,8 +114,8 @@ public class HttpServerVerticle extends AbstractVerticle {
 	
 	private void createAuthorHandler(RoutingContext rc) {
 		JsonObject json = rc.getBodyAsJson();
-		authorService.createAuthorJooqSP(json.getString("first_name"), 
-				json.getString("last_name"), created(rc));
+		authorService.createAuthorJooqSP(json.getString("firstName"), 
+				json.getString("lastName"), created(rc));
 	}
 	
 	private void updateAuthorHandler(RoutingContext rc) {

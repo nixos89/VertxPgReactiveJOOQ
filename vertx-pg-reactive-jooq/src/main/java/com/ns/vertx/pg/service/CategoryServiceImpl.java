@@ -100,10 +100,10 @@ public class CategoryServiceImpl implements CategoryService {
 					.insertInto(CATEGORY, CATEGORY.NAME, CATEGORY.IS_DELETED)
 					.values(name, isDeleted));
 		});		
-		retVal.onSuccess(ar -> Future.succeededFuture());
+		retVal.onSuccess(ar -> resultHandler.handle(Future.succeededFuture()));
 		retVal.onFailure(handler -> {
 			queryExecutor.rollback();
-			Future.failedFuture(handler);
+			resultHandler.handle(Future.failedFuture(handler));
 		});		
 		return this;
 	}
