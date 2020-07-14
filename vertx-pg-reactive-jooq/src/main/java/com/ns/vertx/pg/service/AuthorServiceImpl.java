@@ -158,9 +158,9 @@ public class AuthorServiceImpl implements AuthorService {
 	// **************************************************************************************************	
 	private static JsonObject fillAuthor(Row row) {
 		return new JsonObject()
-			.put("author_id", row.getLong("author_id"))
-			.put("first_name", row.getString("first_name"))
-			.put("last_name", row.getString("last_name"));							
+			.put("authorId", row.getLong("author_id"))
+			.put("firstName", row.getString("first_name"))
+			.put("lastName", row.getString("last_name"));							
 	}	
 	
 	private static JsonObject extractAuthorsFromLR(List<Row> authorLR){		

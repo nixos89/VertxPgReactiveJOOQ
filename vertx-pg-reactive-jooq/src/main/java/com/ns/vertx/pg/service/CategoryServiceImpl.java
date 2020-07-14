@@ -114,8 +114,8 @@ public class CategoryServiceImpl implements CategoryService {
 		Future<Integer> retVal = queryExecutor.transaction(transactionQE ->{						
 			return transactionQE.execute(dsl -> dsl.update(CATEGORY)
 				.set(CATEGORY.NAME, categoryJO.getString("name"))
-				.set(CATEGORY.IS_DELETED, categoryJO.getBoolean("is_deleted"))
-				.where(CATEGORY.CATEGORY_ID.eq(categoryJO.getLong("category_id")))
+				.set(CATEGORY.IS_DELETED, categoryJO.getBoolean("isDeleted"))
+				.where(CATEGORY.CATEGORY_ID.eq(categoryJO.getLong("categoryId")))
 			);
 		});		
 		retVal.onSuccess(handler -> {
@@ -174,9 +174,9 @@ public class CategoryServiceImpl implements CategoryService {
 			return null;
 		} else {
 			return new JsonObject()
-				.put("category_id", row.getLong(0))
+				.put("categoryId", row.getLong(0))
 				.put("name", row.getString(1))
-				.put("is_deleted", row.getBoolean(2));
+				.put("isDeleted", row.getBoolean(2));
 		}		
 	}
 	

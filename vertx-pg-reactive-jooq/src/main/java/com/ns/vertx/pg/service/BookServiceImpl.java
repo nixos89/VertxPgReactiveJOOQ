@@ -165,7 +165,7 @@ public class BookServiceImpl implements BookService {
 		Future<Void> transactionFuture = queryExecutor.beginTransaction().compose(transactionQE -> 
 			transactionQE.executeAny(dsl -> dsl		
 				.insertInto(BOOK, BOOK.TITLE, BOOK.AMOUNT, BOOK.PRICE, BOOK.IS_DELETED)
-				.values(bookPojo.getTitle(), bookPojo.getAmount(), bookPojo.getPrice(), bookPojo.getIsDeleted())
+				.values(bookPojo.getTitle(), bookPojo.getAmount(), bookPojo.getPrice(), bookJO.getBoolean("isDeleted"))
 				.returningResult(BOOK.BOOK_ID, BOOK.TITLE, BOOK.AMOUNT, BOOK.PRICE, BOOK.IS_DELETED)
 			).compose(insertedBook -> { 				
 				JsonObject resultJO =  BookUtilHelper.extractSingleBookFromRS(insertedBook);
@@ -225,7 +225,7 @@ public class BookServiceImpl implements BookService {
 		Future<Void> updateBookFuture = queryExecutor.beginTransaction().compose(transcationQE -> 
 			transcationQE.execute( dsl -> dsl
 				.update(BOOK).set(BOOK.TITLE, bookPojo.getTitle())
-				.set(BOOK.PRICE, bookPojo.getPrice()).set(BOOK.AMOUNT, bookPojo.getAmount()).set(BOOK.IS_DELETED, bookPojo.getIsDeleted())
+				.set(BOOK.PRICE, bookPojo.getPrice()).set(BOOK.AMOUNT, bookPojo.getAmount()).set(BOOK.IS_DELETED, bookJO.getBoolean("isDeleted"))
 				.where(BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
 			).compose(res -> CompositeFuture
 				.all(iterateCBFuture, iterateABFuture)

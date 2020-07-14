@@ -145,14 +145,15 @@ public class HttpServerVerticle extends AbstractVerticle {
 		Long id =  Long.valueOf(rc.request().getParam("id"));
 		Category categoryPojo = new Category(rc.getBodyAsJson());
 		categoryPojo.setCategoryId(id);
-		JsonObject categoryJO = categoryPojo.toJson();
+		JsonObject categoryJO = rc.getBodyAsJson();
+		categoryJO.put("categoryId", id);
 		categoryService.updateCategoryJooqSP(categoryJO, noContent(rc));
 	}
 	
 	private void createCategoryHandler(RoutingContext rc) {
 		JsonObject json = rc.getBodyAsJson();
 		categoryService
-			.createCategoryJooqSP(json.getString("name"), json.getBoolean("is_deleted"), created(rc));
+			.createCategoryJooqSP(json.getString("name"), json.getBoolean("isDeleted"), created(rc));
 	}
 	
 	private void deleteCategoryHandler(RoutingContext rc) {

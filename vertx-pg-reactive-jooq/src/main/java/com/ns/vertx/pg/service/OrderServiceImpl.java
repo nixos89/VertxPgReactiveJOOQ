@@ -114,13 +114,13 @@ public class OrderServiceImpl implements OrderService {
 				Users userPojo = OrderUtilHelper.getUserPojoFromRS(userRes); 
 				List<JsonObject> orderItemJObjectsToSave = OrderUtilHelper.extractOrderItemsFromOrderJA(orderJO.getJsonArray("orders"));
 				List<Long> orderItemBookIds = orderItemJObjectsToSave.stream()
-						.mapToLong(oi -> oi.getLong("book_id")).boxed().collect(Collectors.toList());
+						.mapToLong(oi -> oi.getLong("book_id")).boxed().collect(Collectors.toList()); 
 				
 				Map<Long, Integer> bookIdAmountMap = OrderUtilHelper.mapOrderItemsFromOrderJA(orderJO.getJsonArray("orders"));												
 				
 				LocalDateTime orderDate = new TimestampToLocalDateTimeConverter().from(new Timestamp(System.currentTimeMillis()));				
 				return transactionQE.executeAny(dsl -> dsl.insertInto(ORDERS).columns(ORDERS.TOTAL, ORDERS.ORDER_DATE, ORDERS.USER_ID)
-						.values(orderJO.getDouble("total_price"), orderDate, userPojo.getUserId())
+						.values(orderJO.getDouble("totalPrice"), orderDate, userPojo.getUserId())
 						.returning(ORDERS.ORDER_ID, ORDERS.TOTAL, ORDERS.ORDER_DATE, ORDERS.USER_ID)
 				).compose(savedOrder -> {
 					Orders savedOrderPojo = OrderUtilHelper.extractOrderRS(savedOrder);																
@@ -174,7 +174,7 @@ public class OrderServiceImpl implements OrderService {
 					    	).compose(success -> {
 							    LOGGER.info("Commiting transaction...");
 					    		transactionQE.commit();
-					    		return Future.succeededFuture(new JsonObject().put("order_id", orderId));					    		
+					    		return Future.succeededFuture(new JsonObject().put("orderId", orderId));					    		
 					    	}, failure -> {
 					    		LOGGER.info("Rolling-back transaction...");
 					    		transactionQE.rollback();

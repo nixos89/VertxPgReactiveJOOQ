@@ -34,11 +34,11 @@ public class BookUtilHelper {
 	
 	static JsonObject fillBook(QueryResult booksQR) {
 		return new JsonObject()
-			.put("book_id", booksQR.get("b_id", Long.class))
+			.put("bookId", booksQR.get("b_id", Long.class))
 			.put("title", booksQR.get("title", String.class))
 			.put("price", booksQR.get("price", Double.class))
 			.put("amount", booksQR.get("amount", Integer.class))
-			.put("is_deleted", booksQR.get("is_deleted", Boolean.class))
+			.put("isDeleted", booksQR.get("is_deleted", Boolean.class))
 			.put("authors", booksQR.get("authors", JsonArray.class))
 			.put("categories", booksQR.get("categories", JsonArray.class));						
 	}
