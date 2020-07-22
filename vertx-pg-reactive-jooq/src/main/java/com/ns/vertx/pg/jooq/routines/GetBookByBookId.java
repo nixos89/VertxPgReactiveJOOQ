@@ -18,23 +18,26 @@ import org.jooq.impl.Internal;
 @SuppressWarnings({ "all", "unchecked", "rawtypes" })
 public class GetBookByBookId extends AbstractRoutine<String> {
 
-    private static final long serialVersionUID = 2029370687;
+    private static final long serialVersionUID = -1788653091;
 
     /**
      * The parameter <code>public.get_book_by_book_id.RETURN_VALUE</code>.
      */
-    public static final Parameter<String> RETURN_VALUE = Internal.createParameter("RETURN_VALUE", org.jooq.impl.SQLDataType.JSON, false, false, org.jooq.Converter.ofNullable(org.jooq.JSON.class, String.class, Object::toString, org.jooq.JSON::valueOf));
+    public static final Parameter<String> RETURN_VALUE = Internal.createParameter("RETURN_VALUE", org.jooq.impl.SQLDataType.JSON, false, false, org.jooq.Converter.ofNullable(org.jooq.JSON.class,
+										String.class, Object::toString, org.jooq.JSON::valueOf));
 
     /**
      * The parameter <code>public.get_book_by_book_id.b_id</code>.
      */
-    public static final Parameter<String> B_ID = Internal.createParameter("b_id", org.jooq.impl.SQLDataType.BIGINT, false, false, org.jooq.Converter.ofNullable(java.lang.Long.class, String.class, Object::toString, java.lang.Long::valueOf));
+    public static final Parameter<String> B_ID = Internal.createParameter("b_id", org.jooq.impl.SQLDataType.BIGINT, false, false, org.jooq.Converter.ofNullable(java.lang.Long.class,
+										String.class, Object::toString, java.lang.Long::valueOf));
 
     /**
      * Create a new routine call instance
      */
     public GetBookByBookId() {
-        super("get_book_by_book_id", Public.PUBLIC, org.jooq.impl.SQLDataType.JSON, org.jooq.Converter.ofNullable(org.jooq.JSON.class, String.class, Object::toString, org.jooq.JSON::valueOf));
+        super("get_book_by_book_id", Public.PUBLIC, org.jooq.impl.SQLDataType.JSON, org.jooq.Converter.ofNullable(org.jooq.JSON.class,
+										String.class, Object::toString, org.jooq.JSON::valueOf));
 
         setReturnParameter(RETURN_VALUE);
         addInParameter(B_ID);

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.jooq.Configuration;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -90,6 +91,8 @@ public class OrderServiceImpl implements OrderService {
 					.substring(3, strResultFinal.length() - 3)
 					.replaceAll("\\\\n", "")
 					.replaceAll("\\\\", "");
+			
+//			StringUtils.substring(strResultFinal, 3, strResultFinal.length() - 3);
 			JsonObject ordersJA = new JsonObject(fixedJSONString);
 			connection.close();
 			resultHandler.handle(Future.succeededFuture(ordersJA));			

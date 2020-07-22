@@ -18,23 +18,26 @@ import org.jooq.impl.Internal;
 @SuppressWarnings({ "all", "unchecked", "rawtypes" })
 public class GetOrderByOrderId extends AbstractRoutine<String> {
 
-    private static final long serialVersionUID = 1388543727;
+    private static final long serialVersionUID = 1041813773;
 
     /**
      * The parameter <code>public.get_order_by_order_id.RETURN_VALUE</code>.
      */
-    public static final Parameter<String> RETURN_VALUE = Internal.createParameter("RETURN_VALUE", org.jooq.impl.SQLDataType.JSON, false, false, org.jooq.Converter.ofNullable(org.jooq.JSON.class, String.class, Object::toString, org.jooq.JSON::valueOf));
+    public static final Parameter<String> RETURN_VALUE = Internal.createParameter("RETURN_VALUE", org.jooq.impl.SQLDataType.JSON, false, false, org.jooq.Converter.ofNullable(org.jooq.JSON.class,
+										String.class, Object::toString, org.jooq.JSON::valueOf));
 
     /**
      * The parameter <code>public.get_order_by_order_id.o_id</code>.
      */
-    public static final Parameter<String> O_ID = Internal.createParameter("o_id", org.jooq.impl.SQLDataType.BIGINT, false, false, org.jooq.Converter.ofNullable(java.lang.Long.class, String.class, Object::toString, java.lang.Long::valueOf));
+    public static final Parameter<String> O_ID = Internal.createParameter("o_id", org.jooq.impl.SQLDataType.BIGINT, false, false, org.jooq.Converter.ofNullable(java.lang.Long.class,
+										String.class, Object::toString, java.lang.Long::valueOf));
 
     /**
      * Create a new routine call instance
      */
     public GetOrderByOrderId() {
-        super("get_order_by_order_id", Public.PUBLIC, org.jooq.impl.SQLDataType.JSON, org.jooq.Converter.ofNullable(org.jooq.JSON.class, String.class, Object::toString, org.jooq.JSON::valueOf));
+        super("get_order_by_order_id", Public.PUBLIC, org.jooq.impl.SQLDataType.JSON, org.jooq.Converter.ofNullable(org.jooq.JSON.class,
+										String.class, Object::toString, org.jooq.JSON::valueOf));
 
         setReturnParameter(RETURN_VALUE);
         addInParameter(O_ID);
