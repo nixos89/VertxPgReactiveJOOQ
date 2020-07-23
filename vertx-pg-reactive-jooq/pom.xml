@@ -9,7 +9,8 @@
 
 	<properties>
 		<vertx.version>3.9.0</vertx.version>
-		<main.verticle>com.ns.vertx.pg.MainVerticle</main.verticle>
+<!-- 		<main.verticle>com.ns.vertx.pg.MainVerticle</main.verticle> -->
+		<vertx.verticle>com.ns.vertx.pg.MainVerticle</vertx.verticle>
 		<vertx.launcher>com.ns.vertx.pg.Main</vertx.launcher>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<jooq.version>3.13.1</jooq.version>
@@ -205,6 +206,8 @@
 <!-- 				</executions> -->
 <!-- 			</plugin> -->
 
+
+			<!-- could be overriding previous "maven-shade-plugin" plug-in -->
 			<plugin>
 				<groupId>io.reactiverse</groupId>
 				<artifactId>vertx-maven-plugin</artifactId>
@@ -247,8 +250,8 @@
 <!-- 				<artifactId>exec-maven-plugin</artifactId> -->
 <!-- 				<version>1.5.0</version> -->
 <!-- 				<configuration> -->
-<!-- 					<mainClass>io.vertx.core.Launcher</mainClass> -->
-<!-- 					<mainClass>com.ns.vertx.pg.Main</mainClass> -->
+<!-- 					<mainClass>io.vertx.core.Main</mainClass> -->
+<!-- 					<mainClass>com.ns.vertx.pg.MainVerticle</mainClass> -->
 <!-- 					<systemProperties> -->
 <!-- 						<systemProperty> -->
 <!-- 							<key>hsqldb.reconfig_logging</key> -->

@@ -7,7 +7,6 @@ import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.jmx.JmxMeterRegistry;
 import io.vertx.core.Launcher;
-import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.micrometer.VertxJmxMetricsOptions;
@@ -18,6 +17,7 @@ public class Main extends Launcher {
 	
 	public static void main(String[] args) {	
 		new Main().dispatch(args);		
+		LOGGER.info(Main.class.getName() + " has successfully been successfully executed!!!!!! Woooo...");
 	}
 
 	@Override
@@ -30,13 +30,11 @@ public class Main extends Launcher {
 		  .setJmxMetricsOptions(new VertxJmxMetricsOptions()
 				  .setEnabled(true)
 				  .setStep(5)
-				  .setDomain("my-domain"))
+				  .setDomain("metrics")) // .setDomain("com.ns.vertx.pg.**")
 		  .setEnabled(true).setMicrometerRegistry(myRegistry)
 		    .setEnabled(true);
 		
-		Vertx vertx = Vertx.vertx(vertxOptions.setMetricsOptions(microMeterOptions));
-		vertx.deployVerticle(MainVerticle.class.getName());
-		LOGGER.info(Main.class.getName() + " has successfully been deployed!!!!!! Woooo...");
+		vertxOptions.setMetricsOptions(microMeterOptions);
 	}
 	
 	
