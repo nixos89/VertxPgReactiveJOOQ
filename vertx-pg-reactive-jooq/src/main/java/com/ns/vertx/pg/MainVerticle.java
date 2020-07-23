@@ -25,7 +25,7 @@ public class MainVerticle extends AbstractVerticle {
 	@Override
 	public void start(Promise<Void> startPromise) throws Exception {
 		Promise<String> dbVerticleDepoyment = Promise.promise();
-				
+/*				
 		CompositeMeterRegistry myRegistry = new CompositeMeterRegistry();
 		myRegistry.add(new JmxMeterRegistry(s -> null, Clock.SYSTEM));
 		
@@ -38,7 +38,7 @@ public class MainVerticle extends AbstractVerticle {
 		  .setEnabled(true).setMicrometerRegistry(myRegistry)
 		    .setEnabled(true);
 		vertx = Vertx.vertx(new VertxOptions().setMetricsOptions(options));
-		// ...then deploy verticles with this vertx instance
+		// ...then deploy verticles with this vertx instance */
 		
 		vertx.deployVerticle(new DatabaseVerticle(), dbVerticleDepoyment );			
 		dbVerticleDepoyment.future().compose(ar -> {			
@@ -59,6 +59,24 @@ public class MainVerticle extends AbstractVerticle {
 				startPromise.fail(handler.cause());
 			}
 		});
-	}	
+	}
+	
+	public static void main(String[] args) {
+		CompositeMeterRegistry myRegistry = new CompositeMeterRegistry();
+		myRegistry.add(new JmxMeterRegistry(s -> null, Clock.SYSTEM));
+		
+		// Default JMX options will publish MBeans under domain "metrics"
+		MicrometerMetricsOptions options = new MicrometerMetricsOptions()
+		  .setJmxMetricsOptions(new VertxJmxMetricsOptions()
+				  .setEnabled(true)
+				  .setStep(5)
+				  .setDomain("com.ns.vertx.pg"))
+		  .setEnabled(true).setMicrometerRegistry(myRegistry)
+		    .setEnabled(true);
+		
+		Vertx vertx = Vertx.vertx(new VertxOptions().setMetricsOptions(options));
+		vertx.deployVerticle(MainVerticle.class.getName());
+		LOGGER.info(MainVerticle.class.getName() + " has successfully been deployed!!!!!! Woooo...");
+	}
 
 }
