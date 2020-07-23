@@ -6,16 +6,9 @@ import org.slf4j.LoggerFactory;
 import com.ns.vertx.pg.http.HttpServerVerticle;
 import com.ns.vertx.pg.service.DatabaseVerticle;
 
-import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import io.micrometer.jmx.JmxMeterRegistry;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
-import io.vertx.micrometer.MicrometerMetricsOptions;
-import io.vertx.micrometer.VertxJmxMetricsOptions;
 
 public class MainVerticle extends AbstractVerticle {
 	
@@ -61,22 +54,23 @@ public class MainVerticle extends AbstractVerticle {
 		});
 	}
 	
-	public static void main(String[] args) {
-		CompositeMeterRegistry myRegistry = new CompositeMeterRegistry();
-		myRegistry.add(new JmxMeterRegistry(s -> null, Clock.SYSTEM));
-		
-		// Default JMX options will publish MBeans under domain "metrics"
-		MicrometerMetricsOptions options = new MicrometerMetricsOptions()
-		  .setJmxMetricsOptions(new VertxJmxMetricsOptions()
-				  .setEnabled(true)
-				  .setStep(5)
-				  .setDomain("com.ns.vertx.pg"))
-		  .setEnabled(true).setMicrometerRegistry(myRegistry)
-		    .setEnabled(true);
-		
-		Vertx vertx = Vertx.vertx(new VertxOptions().setMetricsOptions(options));
-		vertx.deployVerticle(MainVerticle.class.getName());
-		LOGGER.info(MainVerticle.class.getName() + " has successfully been deployed!!!!!! Woooo...");
-	}
+//	public static void main(String[] args) {
+//		CompositeMeterRegistry myRegistry = new CompositeMeterRegistry();
+//		myRegistry.add(new JmxMeterRegistry(s -> null, Clock.SYSTEM));
+//		
+//		// Default JMX options will publish MBeans under domain "metrics"
+//		MicrometerMetricsOptions options = new MicrometerMetricsOptions()
+//		  .setJmxMetricsOptions(new VertxJmxMetricsOptions()
+//				  .setEnabled(true)
+//				  .setStep(5)
+//				  .setDomain("com.ns.vertx.pg"))
+//		  .setEnabled(true).setMicrometerRegistry(myRegistry)
+//		    .setEnabled(true);
+//		
+//		Vertx vertx = Vertx.vertx(new VertxOptions().setMetricsOptions(options));
+//		vertx.deployVerticle(MainVerticle.class.getName());
+//		
+//		LOGGER.info(MainVerticle.class.getName() + " has successfully been deployed!!!!!! Woooo...");
+//	}
 
 }

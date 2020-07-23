@@ -16,22 +16,29 @@ public class Main extends Launcher {
 		
 	public static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) {	
+		new Main().dispatch(args);		
+	}
+
+	@Override
+	public void beforeStartingVertx(VertxOptions vertxOptions) {
 		CompositeMeterRegistry myRegistry = new CompositeMeterRegistry();
 		myRegistry.add(new JmxMeterRegistry(s -> null, Clock.SYSTEM));
 		
 		// Default JMX options will publish MBeans under domain "metrics"
-		MicrometerMetricsOptions options = new MicrometerMetricsOptions()
+		MicrometerMetricsOptions microMeterOptions = new MicrometerMetricsOptions()
 		  .setJmxMetricsOptions(new VertxJmxMetricsOptions()
 				  .setEnabled(true)
 				  .setStep(5)
-				  .setDomain("com.ns.vertx.pg"))
+				  .setDomain("my-domain"))
 		  .setEnabled(true).setMicrometerRegistry(myRegistry)
 		    .setEnabled(true);
 		
-		Vertx vertx = Vertx.vertx(new VertxOptions().setMetricsOptions(options));
+		Vertx vertx = Vertx.vertx(vertxOptions.setMetricsOptions(microMeterOptions));
 		vertx.deployVerticle(MainVerticle.class.getName());
 		LOGGER.info(Main.class.getName() + " has successfully been deployed!!!!!! Woooo...");
 	}
+	
+	
 
 }
