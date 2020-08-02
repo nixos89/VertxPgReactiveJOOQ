@@ -117,8 +117,6 @@
 			<artifactId>vertx-dropwizard-metrics</artifactId>
 		</dependency>
 
-		
-
 	</dependencies>
 
 	<build>
