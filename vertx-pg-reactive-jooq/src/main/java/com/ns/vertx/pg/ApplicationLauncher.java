@@ -20,7 +20,7 @@ public class ApplicationLauncher extends Launcher {
 		options.setMetricsOptions(
 			new DropwizardMetricsOptions()
 				.setJmxEnabled(true)
-				.setJmxDomain("vertx-metrics"));
+				.setJmxDomain("vertx-metrics").setEnabled(true));
 	}
 
 	@Override
@@ -30,7 +30,7 @@ public class ApplicationLauncher extends Launcher {
 		System.out.println("+++++++++++ com.sun.management.jmxremote.port = " + jmxPort + " +++++++++++");
 		List<String> arguments = rmxBean.getInputArguments();
 		System.out.println("*******************************\n rmxBean.getInputArguments():");
-		for(String arg: arguments) {
+		for (String arg : arguments) {
 			System.out.println("arg = " + arg);
 		}
 		System.out.println("******************************");
