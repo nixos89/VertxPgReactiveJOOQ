@@ -4,6 +4,8 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.List;
 
+import com.codahale.metrics.MetricRegistry;
+
 import io.vertx.core.Launcher;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
@@ -17,10 +19,12 @@ public class ApplicationLauncher extends Launcher {
 
 	@Override
 	public void beforeStartingVertx(VertxOptions options) {
+		MetricRegistry metricRegistry = new MetricRegistry(); // just added
 		options.setMetricsOptions(
 			new DropwizardMetricsOptions()
 				.setJmxEnabled(true)
-				.setJmxDomain("vertx-metrics").setEnabled(true));
+				.setJmxDomain("vertx-metrics").setEnabled(true)
+				.setMetricRegistry(metricRegistry));
 	}
 
 	@Override
