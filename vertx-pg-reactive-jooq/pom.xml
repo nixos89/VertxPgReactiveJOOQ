@@ -9,13 +9,12 @@
 
 	<properties>
 		<vertx.version>3.9.0</vertx.version>
-<!-- 		<main.verticle>com.ns.vertx.pg.MainVerticle</main.verticle> -->
-		<vertx.verticle>com.ns.vertx.pg.MainVerticle</vertx.verticle>
-		<vertx.launcher>com.ns.vertx.pg.Main</vertx.launcher>
+		<main.verticle>com.ns.vertx.pg.MainVerticle</main.verticle>
+		<vertx.launcher>com.ns.vertx.pg.MainLauncher</vertx.launcher>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<jooq.version>3.13.1</jooq.version>
 		<vertx-jooq-classic-reactive.version>5.1.1</vertx-jooq-classic-reactive.version>
-		<micrometer.version>1.1.0</micrometer.version>
+		<micrometer.version>1.3.5</micrometer.version> <!-- ...or 1.1.16 -->
 	</properties>
 
 	<dependencyManagement>
@@ -174,57 +173,57 @@
 
 		<plugins>
 		
-<!-- 			<plugin> -->
-<!-- 				<groupId>org.apache.maven.plugins</groupId> -->
-<!-- 				<artifactId>maven-shade-plugin</artifactId> -->
-<!-- 				<version>2.4.3</version> -->
-<!-- 				<executions> -->
-<!-- 					<execution> -->
-<!-- 						<phase>package</phase> -->
-<!-- 						<goals> -->
-<!-- 							<goal>shade</goal> -->
-<!-- 						</goals> -->
-<!-- 						<configuration> -->
-<!-- 							<transformers> -->
-<!-- 								<transformer -->
-<!-- 									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"> -->
-<!-- 									<manifestEntries> -->
-<!-- 										<Main-Class>io.vertx.core.Launcher</Main-Class> -->
-<!-- 										<Main-Verticle>${main.verticle}</Main-Verticle> -->
-<!-- 									</manifestEntries> -->
-<!-- 								</transformer> -->
-<!-- 								<transformer -->
-<!-- 									implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer"> -->
-<!-- 									<resource>META-INF/services/io.vertx.core.spi.VerticleFactory</resource> -->
-<!-- 								</transformer> -->
-<!-- 							</transformers> -->
-<!-- 							<artifactSet> -->
-<!-- 							</artifactSet> -->
-<!-- 							<outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar</outputFile> -->
-<!-- 						</configuration> -->
-<!-- 					</execution> -->
-<!-- 				</executions> -->
-<!-- 			</plugin> -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>2.4.3</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<transformers>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<manifestEntries>
+										<Main-Class>${vertx.launcher}</Main-Class>
+										<Main-Verticle>${main.verticle}</Main-Verticle>
+									</manifestEntries>
+								</transformer>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>META-INF/services/io.vertx.core.spi.VerticleFactory</resource>
+								</transformer>
+							</transformers>
+							<artifactSet>
+							</artifactSet>
+							<outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar</outputFile>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 
 
 			<!-- could be overriding previous "maven-shade-plugin" plug-in -->
-			<plugin>
-				<groupId>io.reactiverse</groupId>
-				<artifactId>vertx-maven-plugin</artifactId>
-				<version>1.0.18</version>
-				<executions>
-					<execution>
-						<id>vmp</id>
-						<goals>
-							<goal>initialize</goal>
-							<goal>package</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<redeploy>true</redeploy>
-				</configuration>
-			</plugin>
+<!-- 			<plugin> -->
+<!-- 				<groupId>io.reactiverse</groupId> -->
+<!-- 				<artifactId>vertx-maven-plugin</artifactId> -->
+<!-- 				<version>1.0.18</version> -->
+<!-- 				<executions> -->
+<!-- 					<execution> -->
+<!-- 						<id>vmp</id> -->
+<!-- 						<goals> -->
+<!-- 							<goal>initialize</goal> -->
+<!-- 							<goal>package</goal> -->
+<!-- 						</goals> -->
+<!-- 					</execution> -->
+<!-- 				</executions> -->
+<!-- 				<configuration> -->
+<!-- 					<redeploy>true</redeploy> -->
+<!-- 				</configuration> -->
+<!-- 			</plugin> -->
 
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
@@ -245,25 +244,25 @@
 				</executions>
 			</plugin>
 
-<!-- 			<plugin> -->
-<!-- 				<groupId>org.codehaus.mojo</groupId> -->
-<!-- 				<artifactId>exec-maven-plugin</artifactId> -->
-<!-- 				<version>1.5.0</version> -->
-<!-- 				<configuration> -->
-<!-- 					<mainClass>io.vertx.core.Main</mainClass> -->
-<!-- 					<mainClass>com.ns.vertx.pg.MainVerticle</mainClass> -->
-<!-- 					<systemProperties> -->
-<!-- 						<systemProperty> -->
-<!-- 							<key>hsqldb.reconfig_logging</key> -->
-<!-- 							<value>false</value> -->
-<!-- 						</systemProperty> -->
-<!-- 					</systemProperties> -->
-<!-- 					<arguments> -->
-<!-- 						<argument>run</argument> -->
-<!-- 						<argument>${main.verticle}</argument> -->
-<!-- 					</arguments> -->
-<!-- 				</configuration> -->
-<!-- 			</plugin> -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.5.0</version>
+				<configuration>
+					<mainClass>${vertx.launcher}</mainClass>
+					<mainClass>${main.verticle}</mainClass>
+					<systemProperties>
+						<systemProperty>
+							<key>hsqldb.reconfig_logging</key>
+							<value>false</value>
+						</systemProperty>
+					</systemProperties>
+					<arguments>
+						<argument>run</argument>
+						<argument>${main.verticle}</argument>
+					</arguments>
+				</configuration>
+			</plugin>
 
 			<!-- ================================================ -->
 			<!-- Plug-in for "VertX-JOOQ-Classic-Reactive"::START -->
@@ -389,13 +388,6 @@
 									</converter>
 									<includeExpression>(?i:get_order_by_order_id\.o_id)</includeExpression>
 								</forcedType>
-
-								<!-- <forcedType> -->
-								<!-- <userType>io.vertx.core.json.JsonArray</userType> -->
-								<!-- <binding>com.ns.vertx.pg.converters.PostgresJSONVertxJsonArrayBinding</binding> -->
-								<!-- <includeExpression>.*JSON.*</includeExpression> -->
-								<!-- <includeTypes>.*JSON.*</includeTypes> -->
-								<!-- </forcedType> -->
 
 							</forcedTypes>
 							<dateAsTimestamp>true</dateAsTimestamp>
