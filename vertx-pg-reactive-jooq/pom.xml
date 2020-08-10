@@ -13,7 +13,7 @@
 		<vertx.launcher>com.ns.vertx.pg.ApplicationLauncher</vertx.launcher>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<jooq.version>3.13.1</jooq.version>
-		<vertx-jooq-classic-reactive.version>5.1.1</vertx-jooq-classic-reactive.version>
+		<vertx-jooq.version>5.1.1</vertx-jooq.version>
 	</properties>
 
 	<dependencyManagement>
@@ -75,7 +75,7 @@
 		<dependency>
 			<groupId>io.github.jklingsporn</groupId>
 			<artifactId>vertx-jooq-classic-reactive</artifactId>
-			<version>${vertx-jooq-classic-reactive.version}</version>
+			<version>${vertx-jooq.version}</version>
 		</dependency>
 
 		<dependency>
@@ -99,7 +99,7 @@
 		<dependency>
 			<groupId>io.github.jklingsporn</groupId>
 			<artifactId>vertx-jooq-generate</artifactId>
-			<version>5.1.1</version>
+			<version>${vertx-jooq.version}</version>
 			<type>jar</type>
 			<scope>compile</scope>
 		</dependency>
@@ -115,6 +115,7 @@
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-dropwizard-metrics</artifactId>
+<!-- 			<version>4.1.2</version> -->
 		</dependency>
 
 	</dependencies>
@@ -260,7 +261,7 @@
 					<dependency>
 						<groupId>io.github.jklingsporn</groupId>
 						<artifactId>vertx-jooq-generate</artifactId>
-						<version>${vertx-jooq-classic-reactive.version}</version>
+						<version>${vertx-jooq.version}</version>
 					</dependency>
 				</dependencies>
 

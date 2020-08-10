@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
 import org.jooq.Configuration;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -191,32 +190,5 @@ public class OrderServiceImpl implements OrderService {
 		retVal.onFailure(handler -> resultHandler.handle(Future.failedFuture(handler)));
 		return this;
 	}
-	
-	/*
-	@Override
-	public OrderService getAllOrdersJooqSP(Handler<AsyncResult<JsonArray>> resultHandler) {
-		Future<QueryResult> ordersFuture = queryExecutor.transaction(qe -> qe
-			.query(dsl -> dsl.resultQuery("SELECT get_all_orders()")
-		));		
-		
-//		Future<Row> ordersFuture = queryExecutor.transaction(qe -> qe
-//				.findOneRow(dsl -> dsl.select(Routines.getAllOrders())
-//			));
-		LOGGER.info("Passed ordersFuture...");
-	    ordersFuture.onComplete(handler -> {
-			if (handler.succeeded()) {								
-//				QueryResult qRes = handler.result();					
-//				JsonObject ordersJsonObject = OrderUtilHelper.convertGetAllOrdersQRToJsonObject(qRes);
-				JsonObject ordersJsonObject = OrderUtilHelper.extractJOFromRow(handler.result());				
-				resultHandler.handle(Future.succeededFuture(ordersJsonObject));
-	    	} else {
-	    		LOGGER.error("Error, something failed in retrivening ALL orders! handler.cause() = " + handler.cause());
-	    		queryExecutor.rollback();	    		
-	    		resultHandler.handle(Future.failedFuture(handler.cause()));
-	    	}
-	    }); 	
-		return this;
-	}
-	*/
 		
 }

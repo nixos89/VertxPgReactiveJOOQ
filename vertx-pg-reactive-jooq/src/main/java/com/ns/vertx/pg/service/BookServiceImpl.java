@@ -170,27 +170,24 @@ public class BookServiceImpl implements BookService {
 			).compose(insertedBook -> { 				
 				JsonObject resultJO =  BookUtilHelper.extractSingleBookFromRS(insertedBook);
 				final Long bookId = resultJO.getLong("book_id");
-				LOGGER.info("saved book:\n" + resultJO.encodePrettily());
+//				LOGGER.info("saved book:\n" + resultJO.encodePrettily());
 				
 				Set<Long> authorIds = bookJO.getJsonArray("authors").stream().mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());															
 				Set<Long> categoryIds = bookJO.getJsonArray("categories").stream().mapToLong(c -> Long.valueOf(String.valueOf(c))).boxed().collect(Collectors.toSet());																	
 								
 				return transactionQE.execute(dsl -> {			
-					LOGGER.info("Going good..");
 					CommonTableExpression<Record2<Long, Long>> author_book_tbl = BookUtilHelper.author_book_tbl(dsl, bookId, authorIds);					
 					return dsl.with(author_book_tbl)						
 						.insertInto(AUTHOR_BOOK, AUTHOR_BOOK.BOOK_ID, AUTHOR_BOOK.AUTHOR_ID)
 						.select(dsl.selectFrom(author_book_tbl));
 				}).compose(res -> {
 					return transactionQE.execute(dsl -> { 	
-						LOGGER.info("Going good..");
 						CommonTableExpression<Record2<Long, Long>> category_book_tbl = BookUtilHelper.category_book_tbl(dsl, bookId, categoryIds);											
 						return dsl.with(category_book_tbl)									
 							.insertInto(CATEGORY_BOOK, CATEGORY_BOOK.BOOK_ID, CATEGORY_BOOK.CATEGORY_ID)
 						    .select(dsl.selectFrom(category_book_tbl));					
 					}); 
 				}).compose(success -> {
-						LOGGER.info("Commiting transcation...");
 						return transactionQE.commit();
 					}, failure -> {
 						LOGGER.info("Oops, rolling-back transcation...");
@@ -199,7 +196,6 @@ public class BookServiceImpl implements BookService {
 		}));		
 		transactionFuture.onComplete(handler -> {
 			if (handler.succeeded()) {
-				LOGGER.info("Success, inserting is completed!");
 				resultHandler.handle(Future.succeededFuture());
 			} else {
 				LOGGER.error("Error, somethin' WENT WRRRONG!! handler.result() = " + handler.cause());
@@ -290,7 +286,7 @@ public class BookServiceImpl implements BookService {
 				return Future.succeededFuture();
 			}
 		});
-		iterateCBFuture.onSuccess(handler -> {LOGGER.info("Success, iterateCBFuture passed!"); promise.complete();});
+		iterateCBFuture.onSuccess(handler -> promise.complete());
 		iterateCBFuture.onFailure(handler -> {LOGGER.error("Error, iterateCBFuture FAILED!"); promise.fail(handler);});		
 		return promise.future();
 	}	
@@ -339,7 +335,7 @@ public class BookServiceImpl implements BookService {
 				return Future.succeededFuture();
 			}			
 		});
-		iterateABFuture.onSuccess(handler -> {LOGGER.info("Success, iterateABFuture passed!"); promise.complete();});
+		iterateABFuture.onSuccess(handler -> promise.complete());
 		iterateABFuture.onFailure(handler -> {LOGGER.error("Error, iterateABFuture FAILED!"); promise.fail(handler);});
 		return promise.future();
 	}
@@ -351,7 +347,6 @@ public class BookServiceImpl implements BookService {
 		});			
 		deleteBookFuture.onComplete(ar -> {
 			if (ar.succeeded()) {
-				LOGGER.info("Success, deletion successful for Book id = " + id);
 				resultHandler.handle(Future.succeededFuture());
 			} else {
 				LOGGER.error("Error, deletion failed for Book id = " + id);

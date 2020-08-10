@@ -1,6 +1,8 @@
 package com.ns.vertx.pg.http;
 
-import static com.ns.vertx.pg.http.ActionHelper.*;
+import static com.ns.vertx.pg.http.ActionHelper.created;
+import static com.ns.vertx.pg.http.ActionHelper.noContent;
+import static com.ns.vertx.pg.http.ActionHelper.ok;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -198,10 +200,9 @@ public class HttpServerVerticle extends AbstractVerticle {
 	private void getAllOrdersHandler(RoutingContext rc) {
 		vertx.executeBlocking(promise -> {
 			orderService.getAllOrdersJooqSP(ok(rc));
-			//LOGGER.info("\n======= Performing 'blockingCodeHandler'... =======");
 		}, res -> {
-//			res.result();
-			//LOGGER.info("\n======= Retriving result inside of 'resultHandler'... =======");
+//			JsonObject asyncResJO = (JsonObject) res.result();
+//			LOGGER.info("asyncResJO.encodePrettily():\n" + asyncResJO.encodePrettily());			
 			//LOGGER.info("*************** Done!!! ***************");
 		});
 	}
