@@ -189,7 +189,7 @@ public class HttpServerVerticle extends AbstractVerticle {
 		Long id = Long.valueOf(rc.request().getParam("id"));
 		JsonObject bookJO = rc.getBodyAsJson();
 		bookJO.put("book_id", id);
-		bookService.updateBookJooqSP(bookJO, ok(rc));
+		bookService.updateBookJooqSP(bookJO, noContent(rc));
 	}
 
 	private void deleteBookHandler(RoutingContext rc) {

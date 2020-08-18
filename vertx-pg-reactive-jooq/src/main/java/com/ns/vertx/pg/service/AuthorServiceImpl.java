@@ -100,12 +100,12 @@ public class AuthorServiceImpl implements AuthorService {
 				.values(firstName, lastName)
 				.returningResult(AUTHOR.AUTHOR_ID));			
 		});	
-		LOGGER.info("About to go into retVal.onSuccess(..) method...");
+		// LOGGER.info("About to go into retVal.onSuccess(..) method...");
 		retVal.onSuccess(ar -> {
-			LOGGER.info("Author with ID  = " + ar + "is inserted...");
 			resultHandler.handle(Future.succeededFuture());
 		});
 		retVal.onFailure(throwable -> {
+			LOGGER.error("Error, creation of Author FAILED! Rolling back...");
 			queryExecutor.rollback();
 			resultHandler.handle(Future.failedFuture(throwable));
 		});	

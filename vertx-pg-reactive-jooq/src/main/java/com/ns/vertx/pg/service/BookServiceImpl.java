@@ -268,7 +268,7 @@ public class BookServiceImpl implements BookService {
 			} else if (toInsertCatIdsSet.isEmpty() && !deleteCatIdsSet.isEmpty()) {				
 				queryExecutor.execute(dsl -> dsl.deleteFrom(CATEGORY_BOOK)
 						.where(CATEGORY_BOOK.BOOK_ID.eq(Long.valueOf(bookId))).and(CATEGORY_BOOK.CATEGORY_ID.in(deleteCatIdsSet)));
-				
+								
 				promise.complete();
 				return Future.succeededFuture();
 			} else if (!toInsertCatIdsSet.isEmpty() && deleteCatIdsSet.isEmpty()) {
@@ -283,6 +283,7 @@ public class BookServiceImpl implements BookService {
 				promise.complete();
 				return Future.succeededFuture();
 			} else { // nothing changes
+				promise.complete(); //added for debugging purposes
 				return Future.succeededFuture();
 			}
 		});

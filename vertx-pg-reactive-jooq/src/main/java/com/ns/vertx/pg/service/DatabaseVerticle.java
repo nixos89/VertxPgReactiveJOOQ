@@ -26,7 +26,7 @@ public class DatabaseVerticle extends AbstractVerticle {
 				.setDatabase("vertx-jooq-cr")
 				.setUser("postgres").setPassword("postgres"); // DB User credentials
 
-		PoolOptions poolOptions = new PoolOptions().setMaxSize(30);
+		PoolOptions poolOptions = new PoolOptions().setMaxSize(2000);
 		PgPool pgClient = PgPool.pool(vertx, connectOptions, poolOptions);
 
 		// setting up JOOQ configuration
