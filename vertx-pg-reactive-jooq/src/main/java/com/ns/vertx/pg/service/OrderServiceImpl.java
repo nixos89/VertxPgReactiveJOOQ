@@ -91,7 +91,6 @@ public class OrderServiceImpl implements OrderService {
 					.replaceAll("\\\\n", "")
 					.replaceAll("\\\\", "");
 			
-//			StringUtils.substring(strResultFinal, 3, strResultFinal.length() - 3);
 			JsonObject ordersJA = new JsonObject(fixedJSONString);
 			connection.close();
 			resultHandler.handle(Future.succeededFuture(ordersJA));			
@@ -174,12 +173,11 @@ public class OrderServiceImpl implements OrderService {
 					    		.insertInto(ORDER_ITEM, ORDER_ITEM.ORDER_ID, ORDER_ITEM.BOOK_ID, ORDER_ITEM.AMOUNT)
 					    		.select(dsl.selectFrom(oiTmp))					    		
 					    	).compose(success -> {
-							    LOGGER.info("Commiting transaction...");
 					    		transactionQE.commit();
 					    		return Future.succeededFuture(new JsonObject().put("orderId", orderId));					    		
 					    	}, failure -> {
 					    		LOGGER.info("Rolling-back transaction...");
-					    		transactionQE.rollback();
+					    		transactionQE.rollback().onFailure(handler -> LOGGER.error("Error, rolling-back failed for Order creation!"));
 					    		return Future.failedFuture(failure);
 					    	});					    								
 					    }); 								

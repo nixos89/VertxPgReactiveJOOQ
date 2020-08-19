@@ -123,7 +123,7 @@ public class HttpServerVerticle extends AbstractVerticle {
 	private void updateAuthorHandler(RoutingContext rc) {
 		Long id =  Long.valueOf(rc.request().getParam("id"));
 		JsonObject authorJO = rc.getBodyAsJson();
-		authorJO.put("author_id", id);
+		authorJO.put("authorId", id);
 		authorService.updateAuthorJooqSP(authorJO, noContent(rc));
 	}	
 	

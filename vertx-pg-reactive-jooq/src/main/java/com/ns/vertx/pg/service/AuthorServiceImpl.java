@@ -100,13 +100,12 @@ public class AuthorServiceImpl implements AuthorService {
 				.values(firstName, lastName)
 				.returningResult(AUTHOR.AUTHOR_ID));			
 		});	
-		// LOGGER.info("About to go into retVal.onSuccess(..) method...");
 		retVal.onSuccess(ar -> {
 			resultHandler.handle(Future.succeededFuture());
 		});
 		retVal.onFailure(throwable -> {
 			LOGGER.error("Error, creation of Author FAILED! Rolling back...");
-			queryExecutor.rollback();
+			queryExecutor.rollback().onFailure(handler -> LOGGER.error("Error, rolling-back FAILED!"));
 			resultHandler.handle(Future.failedFuture(throwable));
 		});	
 		return this;
@@ -115,20 +114,19 @@ public class AuthorServiceImpl implements AuthorService {
 
 	@Override
 	public AuthorService updateAuthorJooqSP(JsonObject authorJO, Handler<AsyncResult<Void>> resultHandler) {
-		// TODO Auto-generated method stub
 		Future<Integer> retVal = queryExecutor.transaction(transactionQE -> {				
 			return transactionQE.execute(dsl -> dsl
 				.update(AUTHOR)
-				.set(AUTHOR.FIRST_NAME, authorJO.getString("first_name"))
-				.set(AUTHOR.LAST_NAME, authorJO.getString("last_name"))
-				.where(AUTHOR.AUTHOR_ID.eq(authorJO.getLong("author_id")))				
+				.set(AUTHOR.FIRST_NAME, authorJO.getString("firstName"))
+				.set(AUTHOR.LAST_NAME, authorJO.getString("lastName"))
+				.where(AUTHOR.AUTHOR_ID.eq(authorJO.getLong("authorId")))				
 			);
 		});		
 		retVal.onSuccess(ar -> resultHandler.handle(Future.succeededFuture()));
 		retVal.onFailure(handler -> {
 			LOGGER.error("Error, something went wrong! Cause:\n" + handler.getStackTrace());
 			resultHandler.handle(Future.failedFuture(new NoSuchElementException("Error, author has not been updated for id = "
-					+ authorJO.getLong("author_id") + "! Cause: " + handler)));
+					+ authorJO.getLong("authorId") + "!")));
 		});				
 		return this;
 	}
@@ -145,7 +143,8 @@ public class AuthorServiceImpl implements AuthorService {
 			if(ar.succeeded()) {
 				resultHandler.handle(Future.succeededFuture());
 			} else {
-				queryExecutor.rollback();
+				queryExecutor.rollback().onFailure(handler -> 
+					LOGGER.error("Error, rolling-back DELETING Author ID = " + id + "FAILED!"));
 				resultHandler.handle(Future.failedFuture(new NoSuchElementException("No author with id = " + id)));
 			}
 		});		
