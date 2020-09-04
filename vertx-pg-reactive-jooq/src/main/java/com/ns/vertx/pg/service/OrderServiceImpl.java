@@ -11,6 +11,8 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,11 +43,15 @@ import com.ns.vertx.pg.jooq.tables.pojos.Orders;
 import com.ns.vertx.pg.jooq.tables.pojos.Users;
 
 import io.github.jklingsporn.vertx.jooq.classic.reactivepg.ReactiveClassicGenericQueryExecutor;
+import io.github.jklingsporn.vertx.jooq.shared.JsonObjectConverter;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.pgclient.PgPool;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.SqlConnection;
 
 public class OrderServiceImpl implements OrderService {
@@ -112,19 +118,19 @@ public class OrderServiceImpl implements OrderService {
 			transactionQE.executeAny(dsl -> dsl
 				.selectFrom(USERS).where(USERS.USERNAME.eq(username))
 			).compose(userRes -> {
-				Users userPojo = OrderUtilHelper.getUserPojoFromRS(userRes); 
-				List<JsonObject> orderItemJObjectsToSave = OrderUtilHelper.extractOrderItemsFromOrderJA(orderJO.getJsonArray("orders"));
+				Users userPojo = getUserPojoFromRS(userRes); 
+				List<JsonObject> orderItemJObjectsToSave = extractOrderItemsFromOrderJA(orderJO.getJsonArray("orders"));
 				List<Long> orderItemBookIds = orderItemJObjectsToSave.stream()
 						.mapToLong(oi -> oi.getLong("book_id")).boxed().collect(Collectors.toList()); 
 				
-				Map<Long, Integer> bookIdAmountMap = OrderUtilHelper.mapOrderItemsFromOrderJA(orderJO.getJsonArray("orders"));												
+				Map<Long, Integer> bookIdAmountMap = mapOrderItemsFromOrderJA(orderJO.getJsonArray("orders"));												
 				
 				LocalDateTime orderDate = new TimestampToLocalDateTimeConverter().from(new Timestamp(System.currentTimeMillis()));				
 				return transactionQE.executeAny(dsl -> dsl.insertInto(ORDERS).columns(ORDERS.TOTAL, ORDERS.ORDER_DATE, ORDERS.USER_ID)
 						.values(orderJO.getDouble("totalPrice"), orderDate, userPojo.getUserId())
 						.returning(ORDERS.ORDER_ID, ORDERS.TOTAL, ORDERS.ORDER_DATE, ORDERS.USER_ID)
 				).compose(savedOrder -> {
-					Orders savedOrderPojo = OrderUtilHelper.extractOrderRS(savedOrder);																
+					Orders savedOrderPojo = extractOrderRS(savedOrder);																
 					return transactionQE.executeAny(dsl -> dsl
 							.select(BOOK.BOOK_ID, BOOK.PRICE, BOOK.TITLE, BOOK.AMOUNT, BOOK.IS_DELETED).from(BOOK)
 							.where(BOOK.BOOK_ID.in(orderItemBookIds))
@@ -187,6 +193,57 @@ public class OrderServiceImpl implements OrderService {
 		retVal.onSuccess(result -> resultHandler.handle(Future.succeededFuture(result)));
 		retVal.onFailure(handler -> resultHandler.handle(Future.failedFuture(handler)));
 		return this;
+	}
+	
+	static Users getUserPojoFromRS(RowSet<Row> userRS) {
+		JsonObject userJO = new JsonObject();
+		for (Row row : userRS) {
+			userJO.put("user_id", row.getLong("user_id"));
+			userJO.put("role_id", row.getLong("role_id"));
+			userJO.put("first_name", row.getString("first_name"));
+			userJO.put("last_name", row.getString("last_name"));
+			userJO.put("email", row.getString("email"));
+			userJO.put("username", row.getString("username"));
+			userJO.put("password", row.getString("password"));
+		}
+		Users userPojo = new Users(userJO);
+		return userPojo;
+	}
+
+	private List<JsonObject> extractOrderItemsFromOrderJA(JsonArray orderItemsJA) {
+		List<String> oiJAStringList = orderItemsJA.stream().map(o -> o.toString()).collect(Collectors.toList());
+
+		List<JsonObject> oiJsonObjectList = new ArrayList<JsonObject>();
+		JsonObjectConverter joConverter = new JsonObjectConverter();
+		for (String oiStr : oiJAStringList) {
+			oiJsonObjectList.add(joConverter.from(oiStr));
+		}
+		if (!oiJsonObjectList.isEmpty()) {
+			return oiJsonObjectList;
+		} else {
+			return null;
+		}
+	}
+
+	private Map<Long, Integer> mapOrderItemsFromOrderJA(JsonArray orderItemsJA) {
+		Map<Long, Integer> bookIdAmountMap = new HashMap<Long, Integer>();
+		orderItemsJA.forEach(oi -> {
+			if (oi instanceof JsonObject) {
+				bookIdAmountMap.put(((JsonObject) oi).getLong("book_id"), ((JsonObject) oi).getInteger("amount"));
+			}
+		});
+		return bookIdAmountMap;
+	}
+
+	private Orders extractOrderRS(RowSet<Row> orderRS) {
+		Orders orderPojo = new Orders();
+		for (Row row : orderRS) {
+			orderPojo.setOrderId(row.getLong("order_id"));
+			orderPojo.setOrderDate(row.getLocalDateTime("order_date"));
+			orderPojo.setTotal(row.getDouble("total"));
+			orderPojo.setUserId(row.getLong("user_id"));
+		}
+		return orderPojo;
 	}
 		
 }

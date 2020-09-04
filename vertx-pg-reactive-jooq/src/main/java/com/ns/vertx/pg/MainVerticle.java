@@ -23,7 +23,7 @@ public class MainVerticle extends AbstractVerticle {
 		dbVerticleDepoyment.future().compose(ar -> {			
 			Promise<String> httpVerticleDeployment = Promise.promise();
 			vertx.deployVerticle(HttpServerVerticle.class.getName(), 
-					new DeploymentOptions().setInstances(HTTP_INSTANCE_NUM),
+					new DeploymentOptions().setInstances(HTTP_INSTANCE_NUM).setWorkerPoolSize(5).setWorkerPoolName("httpServerVerticle-pool"),
 					httpVerticleDeployment);
 			
 			LOGGER.info(" ======== Deploying " + HTTP_INSTANCE_NUM + " instances of "

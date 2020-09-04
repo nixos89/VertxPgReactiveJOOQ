@@ -72,7 +72,7 @@ public class HttpServerVerticle extends AbstractVerticle {
 		routerREST.get("/books/:id").handler(this::getBookByIdHandler);				
 		routerREST.post("/books").handler(this::createBookHandler);
 		routerREST.put("/books/:id").handler(this::updateBookHandler);
-		routerREST.delete("/books/:id").handler(this::deleteBookHandler);		
+		// routerREST.delete("/books/:id").handler(this::deleteBookHandler);		
 		// Orders REST API
 		routerREST.get("/orders").handler(this::getAllOrdersHandler);
 		routerREST.post("/orders").handler(this::createOrderHandler);
@@ -192,15 +192,15 @@ public class HttpServerVerticle extends AbstractVerticle {
 		bookService.updateBookJooqSP(bookJO, noContent(rc));
 	}
 
-	private void deleteBookHandler(RoutingContext rc) {
-		Long id =  Long.valueOf(rc.request().getParam("id"));
-		bookService.deleteBookJooqSP(id, noContent(rc));
-	}
+	// private void deleteBookHandler(RoutingContext rc) {
+	// 	Long id =  Long.valueOf(rc.request().getParam("id"));
+	// 	bookService.deleteBookJooqSP(id, noContent(rc));
+	// }
 		
 	private void getAllOrdersHandler(RoutingContext rc) {
 		vertx.executeBlocking(promise -> {
 			orderService.getAllOrdersJooqSP(ok(rc));
-		}, res -> {
+		}, false, res -> {
 //			JsonObject asyncResJO = (JsonObject) res.result();
 //			LOGGER.info("asyncResJO.encodePrettily():\n" + asyncResJO.encodePrettily());			
 			//LOGGER.info("*************** Done!!! ***************");

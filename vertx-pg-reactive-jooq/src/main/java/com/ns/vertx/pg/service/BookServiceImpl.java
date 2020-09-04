@@ -220,9 +220,10 @@ public class BookServiceImpl implements BookService {
 				.update(BOOK).set(BOOK.TITLE, bookPojo.getTitle())
 				.set(BOOK.PRICE, bookPojo.getPrice()).set(BOOK.AMOUNT, bookPojo.getAmount()).set(BOOK.IS_DELETED, bookJO.getBoolean("isDeleted"))
 				.where(BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
-			).compose(res -> CompositeFuture
-				.all(iterateCategoryBook(transcationQE, categoryUpdatedIds, bookId), iterateAuthorBook(transcationQE, authorUpdatedIds, bookId))		
-				.compose(success -> {
+			).compose(res -> CompositeFuture.all(
+					iterateCategoryBook(transcationQE, categoryUpdatedIds, bookId), 
+					iterateAuthorBook(transcationQE, authorUpdatedIds, bookId)		
+				).compose(success -> {
 					  return transcationQE.commit();
 				  }, failure -> {
 					  return transcationQE.rollback()
@@ -319,6 +320,8 @@ public class BookServiceImpl implements BookService {
 		return promise.future();
 	}
 	
+
+	// REMOVE deleteBookJooqSP(..) method!!!
 	@Override
 	public BookService deleteBookJooqSP(Long id, Handler<AsyncResult<Void>> resultHandler) {
 		Future<Integer> deleteBookFuture =  queryExecutor.transaction(transactionQE -> {
