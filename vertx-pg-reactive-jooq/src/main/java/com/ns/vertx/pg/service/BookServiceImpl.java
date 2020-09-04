@@ -321,25 +321,6 @@ public class BookServiceImpl implements BookService {
 	}
 	
 
-	// REMOVE deleteBookJooqSP(..) method!!!
-	@Override
-	public BookService deleteBookJooqSP(Long id, Handler<AsyncResult<Void>> resultHandler) {
-		Future<Integer> deleteBookFuture =  queryExecutor.transaction(transactionQE -> {
-			return transactionQE.execute(dsl -> dsl.delete(BOOK).where(BOOK.BOOK_ID.eq(Long.valueOf(id))));
-		});			
-		deleteBookFuture.onComplete(ar -> {
-			if (ar.succeeded()) {
-				resultHandler.handle(Future.succeededFuture());
-			} else {
-				LOGGER.error("Error, deletion failed for Book id = " + id);
-				Future<Void> rollbackFuture = queryExecutor.rollback();
-				rollbackFuture.onSuccess(handler -> LOGGER.info("Transaction successfully rolled-back!"));
-				rollbackFuture.onFailure(handler -> LOGGER.info("Error, transcation did NOT rollback! Cause: " + handler.getCause()));				
-				resultHandler.handle(Future.failedFuture(new NoSuchElementException("No book with id = " + id)));
-			}
-		});		
-		return this;
-	}
 	
 
 }

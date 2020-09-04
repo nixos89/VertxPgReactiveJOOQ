@@ -161,24 +161,4 @@ public class BookServiceVertxEBProxy implements BookService {
     });
     return this;
   }
-  @Override
-  public  BookService deleteBookJooqSP(Long id, Handler<AsyncResult<Void>> resultHandler){
-    if (closed) {
-      resultHandler.handle(Future.failedFuture(new IllegalStateException("Proxy is closed")));
-      return this;
-    }
-    JsonObject _json = new JsonObject();
-    _json.put("id", id);
-
-    DeliveryOptions _deliveryOptions = (_options != null) ? new DeliveryOptions(_options) : new DeliveryOptions();
-    _deliveryOptions.addHeader("action", "deleteBookJooqSP");
-    _vertx.eventBus().<Void>request(_address, _json, _deliveryOptions, res -> {
-      if (res.failed()) {
-        resultHandler.handle(Future.failedFuture(res.cause()));
-      } else {
-        resultHandler.handle(Future.succeededFuture(res.result().body()));
-      }
-    });
-    return this;
-  }
 }
