@@ -4,12 +4,11 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.List;
 
-import com.codahale.metrics.MetricRegistry;
-
 import io.vertx.core.Launcher;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
+import io.vertx.micrometer.MicrometerMetricsOptions;
+import io.vertx.micrometer.VertxJmxMetricsOptions;
 
 public class ApplicationLauncher extends Launcher {
 
@@ -18,13 +17,12 @@ public class ApplicationLauncher extends Launcher {
 	}
 
 	@Override
-	public void beforeStartingVertx(VertxOptions options) {
-		MetricRegistry metricRegistry = new MetricRegistry(); // just added
-		options.setMetricsOptions(
-			new DropwizardMetricsOptions()
-				.setJmxEnabled(true)
-				.setJmxDomain("vertx-metrics").setEnabled(true)
-				.setMetricRegistry(metricRegistry));
+	public void beforeStartingVertx(VertxOptions options) {		
+		options.setMetricsOptions(new MicrometerMetricsOptions()
+				.setJmxMetricsOptions(new VertxJmxMetricsOptions().setEnabled(true)
+					.setStep(1)
+					.setDomain("vertx.micrometer.metrics")
+				).setEnabled(true));
 	}
 
 	@Override
