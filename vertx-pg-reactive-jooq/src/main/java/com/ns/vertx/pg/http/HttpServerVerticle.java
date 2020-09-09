@@ -71,14 +71,17 @@ public class HttpServerVerticle extends AbstractVerticle {
 		routerREST.get("/authors/:id/books").handler(this::getAllBooksByAuthorIdHandler);
 		routerREST.get("/books/:id").handler(this::getBookByIdHandler);				
 		routerREST.post("/books").handler(this::createBookHandler);
-		routerREST.put("/books/:id").handler(this::updateBookHandler);
-		// routerREST.delete("/books/:id").handler(this::deleteBookHandler);		
+		routerREST.put("/books/:id").handler(this::updateBookHandler);		
 		// Orders REST API
-		routerREST.get("/orders").handler(this::getAllOrdersHandler);
+		
 		routerREST.post("/orders").handler(this::createOrderHandler);
+//		Router routerRESTNonEventLoop = Router.router(vertx);
+		
+		routerREST.get("/orders").blockingHandler(this::getAllOrdersHandler, false);		
 		
 		Router routerAPI = Router.router(vertx);
 		routerAPI.mountSubRouter("/api", routerREST);
+//		routerAPI.mountSubRouter("/api", routerRESTNonEventLoop);
 		routerAPI.errorHandler(500, error -> {
 			Throwable failure = error.failure();
 			if (failure != null) {
@@ -109,8 +112,9 @@ public class HttpServerVerticle extends AbstractVerticle {
 		authorService.getAllAuthorsJooqSP(ok(rc));
 	}		
 	
-	private void getAuthorByIdHandler(RoutingContext rc) {
+	private void getAuthorByIdHandler(RoutingContext rc) {		
 		Long id = Long.valueOf(rc.request().getParam("id"));
+//		LOGGER.info("Thread: " + Thread.currentThread() + " recieveing author id = " + id);
 		authorService.getAuthorByIdJooqSP(id, ok(rc));
 	}
 	
@@ -191,20 +195,10 @@ public class HttpServerVerticle extends AbstractVerticle {
 		bookJO.put("book_id", id);
 		bookService.updateBookJooqSP(bookJO, noContent(rc));
 	}
-
-	// private void deleteBookHandler(RoutingContext rc) {
-	// 	Long id =  Long.valueOf(rc.request().getParam("id"));
-	// 	bookService.deleteBookJooqSP(id, noContent(rc));
-	// }
 		
 	private void getAllOrdersHandler(RoutingContext rc) {
-		vertx.executeBlocking(promise -> {
-			orderService.getAllOrdersJooqSP(ok(rc));
-		}, false, res -> {
-//			JsonObject asyncResJO = (JsonObject) res.result();
-//			LOGGER.info("asyncResJO.encodePrettily():\n" + asyncResJO.encodePrettily());			
-			//LOGGER.info("*************** Done!!! ***************");
-		});
+//		LOGGER.info("Thread: " + Thread.currentThread() + " invoked for getting ALL Orders!");
+		orderService.getAllOrdersJooqSP(ok(rc));
 	}
 	
 	private void createOrderHandler(RoutingContext rc) {

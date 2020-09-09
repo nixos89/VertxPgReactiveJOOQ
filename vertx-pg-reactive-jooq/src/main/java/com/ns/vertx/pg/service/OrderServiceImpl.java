@@ -82,6 +82,7 @@ public class OrderServiceImpl implements OrderService {
 	public OrderService getAllOrdersJooqSP(Handler<AsyncResult<JsonObject>> resultHandler) {
 		Connection connection = null;
 		try {
+//			LOGGER.info("getAllOrdersJooqSP try-block invoked on thread: " + Thread.currentThread());
 			connection = DriverManager.getConnection(
 					"jdbc:postgresql://localhost:5432/vertx-jooq-cr",
 					"postgres", "postgres");
@@ -101,6 +102,7 @@ public class OrderServiceImpl implements OrderService {
 			connection.close();
 			resultHandler.handle(Future.succeededFuture(ordersJA));			
 		} catch (SQLException e) {
+//			LOGGER.info("getAllOrdersJooqSP catch(SQLException e)-block invoked on thread: " + Thread.currentThread());
 			e.printStackTrace();			
 		}
 		return this;

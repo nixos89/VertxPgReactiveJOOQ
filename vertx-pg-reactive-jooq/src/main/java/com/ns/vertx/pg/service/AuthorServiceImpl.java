@@ -67,6 +67,7 @@ public class AuthorServiceImpl implements AuthorService {
 
 	@Override
 	public AuthorService getAuthorByIdJooqSP(Long authorId, Handler<AsyncResult<JsonObject>> resultHandler) {
+//		LOGGER.info("Thread: " + Thread.currentThread() + " is being invoked inside of 'getAuthorByIdJooqSP' method!");
 		Future<Row> bookFuture = queryExecutor.transaction(qe -> {			
 			return qe.findOneRow(dsl -> dsl
 				.select(AUTHOR.AUTHOR_ID, AUTHOR.FIRST_NAME, AUTHOR.LAST_NAME)

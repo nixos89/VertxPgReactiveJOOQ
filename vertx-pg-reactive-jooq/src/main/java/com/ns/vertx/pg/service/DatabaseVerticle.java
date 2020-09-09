@@ -3,6 +3,8 @@ package com.ns.vertx.pg.service;
 import org.jooq.Configuration;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DefaultConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
@@ -13,6 +15,8 @@ import io.vertx.sqlclient.PoolOptions;
 
 public class DatabaseVerticle extends AbstractVerticle {
 	
+	private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseVerticle.class);
+	
 	public static final String CONFIG_AUTHOR_QUEUE = "author.queue";
 	public static final String CONFIG_BOOK_QUEUE = "book.queue";
 	public static final String CONFIG_CATEGORY_QUEUE = "category.queue";	
@@ -20,13 +24,14 @@ public class DatabaseVerticle extends AbstractVerticle {
 	
 	@Override
 	public void start(Promise<Void> startPromise) throws Exception {
+		LOGGER.info("DatabaseVerticle start() method invoked on thread: " + Thread.currentThread());
 		PgConnectOptions connectOptions = new PgConnectOptions()
 				.setPort(5432)
 				.setHost("localhost")
 				.setDatabase("vertx-jooq-cr")
 				.setUser("postgres").setPassword("postgres"); // DB User credentials
 
-		PoolOptions poolOptions = new PoolOptions().setMaxSize(100); // changed from 2000 to 100
+		PoolOptions poolOptions = new PoolOptions().setMaxSize(5); // changed from 2000 to 100
 		PgPool pgClient = PgPool.pool(vertx, connectOptions, poolOptions);
 
 		// setting up JOOQ configuration

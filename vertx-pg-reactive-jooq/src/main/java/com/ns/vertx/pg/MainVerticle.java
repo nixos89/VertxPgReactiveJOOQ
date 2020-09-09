@@ -9,21 +9,24 @@ import com.ns.vertx.pg.service.DatabaseVerticle;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
+import io.vertx.core.impl.cpu.CpuCoreSensor;
 
 public class MainVerticle extends AbstractVerticle {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
-	private static final int HTTP_INSTANCE_NUM = 4; // number of HttpServerVerticle instance to deploy
+	private static final int HTTP_INSTANCE_NUM = 4; // number of HttpServerVerticle instances to deploy
 	
 	@Override
 	public void start(Promise<Void> startPromise) throws Exception {
+		LOGGER.info("++++ CpuCoreSensor.availableProcessors() = " + CpuCoreSensor.availableProcessors() + " ++++");
+		LOGGER.info("MainVerticle start() method invoked on thread: " + Thread.currentThread());
 		Promise<String> dbVerticleDepoyment = Promise.promise();	
 		
 		vertx.deployVerticle(new DatabaseVerticle(), dbVerticleDepoyment );			
 		dbVerticleDepoyment.future().compose(ar -> {			
 			Promise<String> httpVerticleDeployment = Promise.promise();
 			vertx.deployVerticle(HttpServerVerticle.class.getName(), 
-					new DeploymentOptions().setInstances(HTTP_INSTANCE_NUM).setWorkerPoolSize(5).setWorkerPoolName("httpServerVerticle-pool"),
+					new DeploymentOptions().setInstances(HTTP_INSTANCE_NUM),
 					httpVerticleDeployment);
 			
 			LOGGER.info(" ======== Deploying " + HTTP_INSTANCE_NUM + " instances of "
@@ -38,8 +41,7 @@ public class MainVerticle extends AbstractVerticle {
 				startPromise.fail(handler.cause());
 			}
 		});
-	}	
-	
+	}		
 	
 
 }
