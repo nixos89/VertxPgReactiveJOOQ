@@ -31,6 +31,7 @@ import org.jooq.Row2;
 import org.jooq.Row3;
 import org.jooq.SQLDialect;
 import org.jooq.Table;
+import org.jooq.conf.Settings;
 import org.jooq.impl.DSL;
 import org.jooq.impl.SQLDataType;
 import org.jooq.impl.TimestampToLocalDateTimeConverter;
@@ -86,8 +87,9 @@ public class OrderServiceImpl implements OrderService {
 			connection = DriverManager.getConnection(
 					"jdbc:postgresql://localhost:5432/vertx-jooq-cr",
 					"postgres", "postgres");
-			DSLContext create = DSL.using(connection, SQLDialect.POSTGRES);
-			Result<Record1<String>> resultR1S = create.select(Routines.getAllOrders()).fetch();
+			Settings settings = new Settings().withExecuteLogging(false);
+			DSLContext dslContext = DSL.using(connection, SQLDialect.POSTGRES, settings);
+			Result<Record1<String>> resultR1S = dslContext.select(Routines.getAllOrders()).fetch();
 			String strResultFinal = resultR1S.formatJSON(
 					new JSONFormat()
 					.header(false)

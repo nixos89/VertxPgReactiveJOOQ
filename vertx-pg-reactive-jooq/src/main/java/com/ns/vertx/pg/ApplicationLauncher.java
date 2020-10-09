@@ -26,10 +26,12 @@ public class ApplicationLauncher extends Launcher {
 	public void beforeStartingVertx(VertxOptions options) {	
 		LOGGER.info("ApplicationLauncher beforeStartingVertx(..) method invoked on thread: " + Thread.currentThread());
 		options.setMetricsOptions(new MicrometerMetricsOptions()
-				.setJmxMetricsOptions(new VertxJmxMetricsOptions().setEnabled(true)
-					.setStep(1)
-					.setDomain("vertx.micrometer.metrics")					
-				).setJvmMetricsEnabled(true).setEnabled(true));
+					.setJmxMetricsOptions(new VertxJmxMetricsOptions().setEnabled(true)
+						.setStep(1)
+						.setDomain("vertx.micrometer.metrics")
+				    )
+					.setJvmMetricsEnabled(true).setEnabled(true)					
+				);
 	}
 
 	@Override

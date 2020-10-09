@@ -110,24 +110,19 @@
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-text</artifactId>
 			<version>1.8</version>
-		</dependency>
-
-		<!-- for Dropwizard metrics -->
-<!-- 		<dependency> -->
-<!-- 			<groupId>io.vertx</groupId> -->
-<!-- 			<artifactId>vertx-dropwizard-metrics</artifactId> -->
-<!-- 		</dependency> -->
+		</dependency>		
 
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-micrometer-metrics</artifactId>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>io.micrometer</groupId>
 			<artifactId>micrometer-registry-jmx</artifactId>
 			<version>${micrometer.version}</version>
 		</dependency>
+
 
 	</dependencies>
 
