@@ -42,7 +42,4 @@ public interface BookService {
 	@Fluent
 	BookService updateBookJooqSP(JsonObject bookJO, Handler<AsyncResult<Void>> resultHandler);
 	
-	@Fluent
-	BookService deleteBookJooqSP(Long id, Handler<AsyncResult<Void>> resultHandler);
-	
 }

@@ -10,10 +10,11 @@
 	<properties>
 		<vertx.version>3.9.0</vertx.version>
 		<main.verticle>com.ns.vertx.pg.MainVerticle</main.verticle>
+		<vertx.launcher>com.ns.vertx.pg.ApplicationLauncher</vertx.launcher>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<jooq.version>3.13.1</jooq.version>
-		<vertx-jooq-classic-reactive.version>5.1.1</vertx-jooq-classic-reactive.version>
-		<micrometer.version>1.1.0</micrometer.version>
+		<vertx-jooq.version>5.1.1</vertx-jooq.version>
+		<micrometer.version>1.5.3</micrometer.version>
 	</properties>
 
 	<dependencyManagement>
@@ -75,7 +76,7 @@
 		<dependency>
 			<groupId>io.github.jklingsporn</groupId>
 			<artifactId>vertx-jooq-classic-reactive</artifactId>
-			<version>${vertx-jooq-classic-reactive.version}</version>
+			<version>${vertx-jooq.version}</version>
 		</dependency>
 
 		<dependency>
@@ -99,7 +100,7 @@
 		<dependency>
 			<groupId>io.github.jklingsporn</groupId>
 			<artifactId>vertx-jooq-generate</artifactId>
-			<version>5.1.1</version>
+			<version>${vertx-jooq.version}</version>
 			<type>jar</type>
 			<scope>compile</scope>
 		</dependency>
@@ -109,9 +110,8 @@
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-text</artifactId>
 			<version>1.8</version>
-		</dependency>
+		</dependency>		
 
-		<!-- added next 2 dependencies for creating JMX samples -->
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-micrometer-metrics</artifactId>
@@ -122,6 +122,7 @@
 			<artifactId>micrometer-registry-jmx</artifactId>
 			<version>${micrometer.version}</version>
 		</dependency>
+
 
 	</dependencies>
 
@@ -185,7 +186,7 @@
 								<transformer
 									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<manifestEntries>
-										<Main-Class>io.vertx.core.Launcher</Main-Class>
+										<Main-Class>${vertx.launcher}</Main-Class>
 										<Main-Verticle>${main.verticle}</Main-Verticle>
 									</manifestEntries>
 								</transformer>
@@ -226,7 +227,7 @@
 				<artifactId>exec-maven-plugin</artifactId>
 				<version>1.5.0</version>
 				<configuration>
-					<mainClass>io.vertx.core.Launcher</mainClass>
+					<mainClass>${vertx.launcher}</mainClass>
 					<systemProperties>
 						<systemProperty>
 							<key>hsqldb.reconfig_logging</key>
@@ -266,7 +267,7 @@
 					<dependency>
 						<groupId>io.github.jklingsporn</groupId>
 						<artifactId>vertx-jooq-generate</artifactId>
-						<version>${vertx-jooq-classic-reactive.version}</version>
+						<version>${vertx-jooq.version}</version>
 					</dependency>
 				</dependencies>
 

@@ -170,27 +170,23 @@ public class BookServiceImpl implements BookService {
 			).compose(insertedBook -> { 				
 				JsonObject resultJO =  BookUtilHelper.extractSingleBookFromRS(insertedBook);
 				final Long bookId = resultJO.getLong("book_id");
-				LOGGER.info("saved book:\n" + resultJO.encodePrettily());
 				
 				Set<Long> authorIds = bookJO.getJsonArray("authors").stream().mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());															
 				Set<Long> categoryIds = bookJO.getJsonArray("categories").stream().mapToLong(c -> Long.valueOf(String.valueOf(c))).boxed().collect(Collectors.toSet());																	
 								
 				return transactionQE.execute(dsl -> {			
-					LOGGER.info("Going good..");
 					CommonTableExpression<Record2<Long, Long>> author_book_tbl = BookUtilHelper.author_book_tbl(dsl, bookId, authorIds);					
 					return dsl.with(author_book_tbl)						
 						.insertInto(AUTHOR_BOOK, AUTHOR_BOOK.BOOK_ID, AUTHOR_BOOK.AUTHOR_ID)
 						.select(dsl.selectFrom(author_book_tbl));
 				}).compose(res -> {
 					return transactionQE.execute(dsl -> { 	
-						LOGGER.info("Going good..");
 						CommonTableExpression<Record2<Long, Long>> category_book_tbl = BookUtilHelper.category_book_tbl(dsl, bookId, categoryIds);											
 						return dsl.with(category_book_tbl)									
 							.insertInto(CATEGORY_BOOK, CATEGORY_BOOK.BOOK_ID, CATEGORY_BOOK.CATEGORY_ID)
 						    .select(dsl.selectFrom(category_book_tbl));					
 					}); 
 				}).compose(success -> {
-						LOGGER.info("Commiting transcation...");
 						return transactionQE.commit();
 					}, failure -> {
 						LOGGER.info("Oops, rolling-back transcation...");
@@ -199,7 +195,6 @@ public class BookServiceImpl implements BookService {
 		}));		
 		transactionFuture.onComplete(handler -> {
 			if (handler.succeeded()) {
-				LOGGER.info("Success, inserting is completed!");
 				resultHandler.handle(Future.succeededFuture());
 			} else {
 				LOGGER.error("Error, somethin' WENT WRRRONG!! handler.result() = " + handler.cause());
@@ -217,28 +212,27 @@ public class BookServiceImpl implements BookService {
 		
 		Set<Long> categoryUpdatedIds = bookJO.getJsonArray("categories").stream()
 				.mapToLong(a -> Long.valueOf(String.valueOf(a))).boxed().collect(Collectors.toSet());		
-		Long bookId = bookJO.getLong("book_id");
-		Future<Void> iterateCBFuture = iterateCategoryBook(queryExecutor, categoryUpdatedIds, bookId);
-		Future<Void> iterateABFuture = iterateAuthorBook(queryExecutor, authorUpdatedIds, bookId);		
+		Long bookId = bookJO.getLong("book_id"); 		
 		
 		Book bookPojo = new Book(bookJO);
-		Future<Void> updateBookFuture = queryExecutor.beginTransaction().compose(transcationQE -> 
+		queryExecutor.beginTransaction().compose(transcationQE -> 
 			transcationQE.execute( dsl -> dsl
 				.update(BOOK).set(BOOK.TITLE, bookPojo.getTitle())
 				.set(BOOK.PRICE, bookPojo.getPrice()).set(BOOK.AMOUNT, bookPojo.getAmount()).set(BOOK.IS_DELETED, bookJO.getBoolean("isDeleted"))
 				.where(BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
-			).compose(res -> CompositeFuture
-				.all(iterateCBFuture, iterateABFuture)
-				.compose(success -> {
-					  LOGGER.info("Commiting transaction...");
+			).compose(res -> CompositeFuture.all(
+					iterateCategoryBook(transcationQE, categoryUpdatedIds, bookId), 
+					iterateAuthorBook(transcationQE, authorUpdatedIds, bookId)		
+				).compose(success -> {
 					  return transcationQE.commit();
 				  }, failure -> {
-					  LOGGER.info("Rolling back transaction...");
-					  return transcationQE.rollback();
+					  return transcationQE.rollback()
+							  .onSuccess(handler -> LOGGER.debug("Transaction successfully rolled-back!"))
+							  .onFailure(handler -> LOGGER.error("Error, transaction FAILED to rollback!"));
 				  })
-			));
-		updateBookFuture.onSuccess(handler -> resultHandler.handle(Future.succeededFuture()));
-		updateBookFuture.onFailure(handler -> resultHandler.handle(Future.failedFuture(handler)));		
+			))
+			.onSuccess(handler -> resultHandler.handle(Future.succeededFuture()))
+			.onFailure(handler -> resultHandler.handle(Future.failedFuture(handler)));		
 		return this;
 	}
 		
@@ -257,7 +251,7 @@ public class BookServiceImpl implements BookService {
 					.filter(catId -> !existingBCatIds.contains(catId)).collect(Collectors.toSet());
 			
 			if (!deleteCatIdsSet.isEmpty() && !toInsertCatIdsSet.isEmpty()) {			
-				queryExecutor.execute(dsl -> dsl
+				return queryExecutor.execute(dsl -> dsl
 						.deleteFrom(CATEGORY_BOOK)
 						.where(CATEGORY_BOOK.BOOK_ID.eq(Long.valueOf(bookId)))
 						.and(CATEGORY_BOOK.CATEGORY_ID.in(deleteCatIdsSet)))
@@ -266,31 +260,22 @@ public class BookServiceImpl implements BookService {
 						return dsl.with(category_book_tbl)									
 							.insertInto(CATEGORY_BOOK, CATEGORY_BOOK.BOOK_ID, CATEGORY_BOOK.CATEGORY_ID)
 						    .select(dsl.selectFrom(category_book_tbl));	
-					})); 
-				promise.complete();
-				return Future.succeededFuture();
+					})).mapEmpty(); 
 			} else if (toInsertCatIdsSet.isEmpty() && !deleteCatIdsSet.isEmpty()) {				
-				queryExecutor.execute(dsl -> dsl.deleteFrom(CATEGORY_BOOK)
-						.where(CATEGORY_BOOK.BOOK_ID.eq(Long.valueOf(bookId))).and(CATEGORY_BOOK.CATEGORY_ID.in(deleteCatIdsSet)));
-				
-				promise.complete();
-				return Future.succeededFuture();
+				return queryExecutor.execute(dsl -> dsl.deleteFrom(CATEGORY_BOOK)
+						.where(CATEGORY_BOOK.BOOK_ID.eq(Long.valueOf(bookId))).and(CATEGORY_BOOK.CATEGORY_ID.in(deleteCatIdsSet))).mapEmpty();								
 			} else if (!toInsertCatIdsSet.isEmpty() && deleteCatIdsSet.isEmpty()) {
-				Future<Integer> insertCBFuture = queryExecutor.execute(dsl -> { // performs insertion of categories
+				return queryExecutor.execute(dsl -> { // performs insertion of categories
 					CommonTableExpression<Record2<Long, Long>> category_book_tbl = BookUtilHelper.category_book_tbl(dsl, bookId, toInsertCatIdsSet);
 											
 					return dsl.with(category_book_tbl).insertInto(CATEGORY_BOOK, CATEGORY_BOOK.BOOK_ID, CATEGORY_BOOK.CATEGORY_ID)
 						      .select(dsl.selectFrom(category_book_tbl));	
-				});
-				insertCBFuture.onSuccess(handler -> LOGGER.info("Succes, category-book has been inserted!"));
-				insertCBFuture.onFailure(handler -> LOGGER.error("Error, category-book has NOT been inserted!"));
-				promise.complete();
-				return Future.succeededFuture();
+				}).onFailure(handler -> LOGGER.error("Error, FAILURE in !toInsertCatIdsSet.isEmpty() && deleteCatIdsSet.isEmpty()")).mapEmpty();
 			} else { // nothing changes
 				return Future.succeededFuture();
 			}
 		});
-		iterateCBFuture.onSuccess(handler -> {LOGGER.info("Success, iterateCBFuture passed!"); promise.complete();});
+		iterateCBFuture.onSuccess(handler -> promise.complete());
 		iterateCBFuture.onFailure(handler -> {LOGGER.error("Error, iterateCBFuture FAILED!"); promise.fail(handler);});		
 		return promise.future();
 	}	
@@ -305,7 +290,7 @@ public class BookServiceImpl implements BookService {
 			Set<Long> toInsertAutIdsSet = authorUpdatedIds.stream().filter(catId -> !existingBAuthorIds.contains(catId)).collect(Collectors.toSet());						
 			
 			if (!toInsertAutIdsSet.isEmpty() && !deleteAutIdsSet.isEmpty()) {
-				 queryExecutor.execute(dsl -> dsl
+				 return queryExecutor.execute(dsl -> dsl
 					.deleteFrom(AUTHOR_BOOK).where(AUTHOR_BOOK.BOOK_ID.eq(Long.valueOf(bookId))).and(AUTHOR_BOOK.AUTHOR_ID.in(deleteAutIdsSet))
 				).compose(res ->  queryExecutor.execute(dsl -> {										
 					CommonTableExpression<Record2<Long, Long>> author_book_tbl = BookUtilHelper.author_book_tbl(dsl, bookId, toInsertAutIdsSet);
@@ -313,56 +298,29 @@ public class BookServiceImpl implements BookService {
 					return dsl.with(author_book_tbl)						
 						.insertInto(AUTHOR_BOOK, AUTHOR_BOOK.BOOK_ID, AUTHOR_BOOK.AUTHOR_ID)
 						.select(dsl.selectFrom(author_book_tbl));
-				}));
-				promise.complete();
-				return Future.succeededFuture();
+				})).mapEmpty();				
 			} else if (!toInsertAutIdsSet.isEmpty() && deleteAutIdsSet.isEmpty()) {
-				Future<Integer> insertABFuture = queryExecutor.execute(dsl -> {										
+				return queryExecutor.execute(dsl -> {										
 					CommonTableExpression<Record2<Long, Long>> author_book_tbl = BookUtilHelper.author_book_tbl(dsl, bookId, toInsertAutIdsSet);
 					
 					return dsl.with(author_book_tbl)						
 						.insertInto(AUTHOR_BOOK, AUTHOR_BOOK.BOOK_ID, AUTHOR_BOOK.AUTHOR_ID)
 						.select(dsl.selectFrom(author_book_tbl));
-				});
-				insertABFuture.onSuccess(handler -> LOGGER.info("Success, insertABFuture passed in iterateAuthorBook()!"));
-				insertABFuture.onFailure(handler -> LOGGER.error("Error, insertABFuture FAILED in iterateAuthorBook()!"));
-				promise.complete();
-				return Future.succeededFuture();
+				}).mapEmpty();
 			} else if (toInsertAutIdsSet.isEmpty() && !deleteAutIdsSet.isEmpty()) {				
-				queryExecutor.execute(dsl -> dsl
-					.deleteFrom(AUTHOR_BOOK).where(AUTHOR_BOOK.BOOK_ID.eq(Long.valueOf(bookId))).and(AUTHOR_BOOK.AUTHOR_ID.in(deleteAutIdsSet)));
-				
-				promise.complete();
-				return Future.succeededFuture();
+				return queryExecutor.execute(dsl -> dsl
+					.deleteFrom(AUTHOR_BOOK).where(AUTHOR_BOOK.BOOK_ID.eq(Long.valueOf(bookId))).and(AUTHOR_BOOK.AUTHOR_ID.in(deleteAutIdsSet)))
+					.mapEmpty();				
 			} else { // nothing changes
-				promise.complete();
 				return Future.succeededFuture();
 			}			
 		});
-		iterateABFuture.onSuccess(handler -> {LOGGER.info("Success, iterateABFuture passed!"); promise.complete();});
+		iterateABFuture.onSuccess(handler -> promise.complete());
 		iterateABFuture.onFailure(handler -> {LOGGER.error("Error, iterateABFuture FAILED!"); promise.fail(handler);});
 		return promise.future();
 	}
 	
-	@Override
-	public BookService deleteBookJooqSP(Long id, Handler<AsyncResult<Void>> resultHandler) {
-		Future<Integer> deleteBookFuture =  queryExecutor.transaction(transactionQE -> {
-			return transactionQE.execute(dsl -> dsl.delete(BOOK).where(BOOK.BOOK_ID.eq(Long.valueOf(id))));
-		});			
-		deleteBookFuture.onComplete(ar -> {
-			if (ar.succeeded()) {
-				LOGGER.info("Success, deletion successful for Book id = " + id);
-				resultHandler.handle(Future.succeededFuture());
-			} else {
-				LOGGER.error("Error, deletion failed for Book id = " + id);
-				Future<Void> rollbackFuture = queryExecutor.rollback();
-				rollbackFuture.onSuccess(handler -> LOGGER.info("Transaction successfully rolledback!"));
-				rollbackFuture.onFailure(handler -> LOGGER.info("Error, transcation did NOT rollback! Cause: " + handler.getCause()));				
-				resultHandler.handle(Future.failedFuture(new NoSuchElementException("No book with id = " + id)));
-			}
-		});		
-		return this;
-	}
+
 	
 
 }

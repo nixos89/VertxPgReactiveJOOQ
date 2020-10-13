@@ -139,11 +139,6 @@ public class BookServiceVertxProxyHandler extends ProxyHandler {
                         HelperUtils.createHandler(msg));
           break;
         }
-        case "deleteBookJooqSP": {
-          service.deleteBookJooqSP(json.getValue("id") == null ? null : (json.getLong("id").longValue()),
-                        HelperUtils.createHandler(msg));
-          break;
-        }
         default: throw new IllegalStateException("Invalid action: " + action);
       }
     } catch (Throwable t) {
