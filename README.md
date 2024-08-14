@@ -1,5 +1,5 @@
 # VertxPgReactiveJOOQ
-RESTful web application built in Vertx using [vertx-pg-client](https://github.com/eclipse-vertx/vertx-sql-client/tree/master/vertx-pg-client) and [Reactive Vertx-ifed JOOQ library](https://github.com/jklingsporn/vertx-jooq/tree/master/vertx-jooq-classic-reactive)
+RESTful web application built in Vert.x using [vertx-pg-client](https://github.com/eclipse-vertx/vertx-sql-client/tree/master/vertx-pg-client) and [Reactive Vertx-ifed JOOQ library](https://github.com/jklingsporn/vertx-jooq/tree/master/vertx-jooq-classic-reactive) to create bookshop store for testing performances and resource consumption by simulating use of multiple users sending basic CRUD HTTP (GET, POST, PUT and DELETE) requests.
 
 
 ## How to launch app
